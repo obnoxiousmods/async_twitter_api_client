@@ -31,7 +31,7 @@ from string import ascii_letters
 from .asyncLogin import asyncLogin
 
 
-class asyncAccount:
+class AsyncAccount:
     async def __init__(
         self,
         **kwargs,

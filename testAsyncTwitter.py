@@ -1,9 +1,9 @@
-from asyncTwitter.asyncAccount import asyncAccount
+from asyncTwitter.asyncAccount import AsyncAccount
 from trio import run
 
 
 async def mainFunc():
-    twitter = asyncAccount()
+    twitter = AsyncAccount()
 
     await twitter.__ainit__(
         cookies="C:/Users/a/Documents/Git/infiniteMoneyTwitterBot/cookies/obJellyfin.cookies"
