@@ -734,7 +734,7 @@ class asyncAccount:
     async def _async_add_alt_text(self, media_id: int, text: str) -> Response:
         params = {"media_id": media_id, "alt_text": {"text": text}}
         url = f"{self.v1_api}/media/metadata/create.json"
-        addAltTextResponse = self.session.post(url, headers=get_headers(self.session), json=params)
+        addAltTextResponse = await self.session.post(url, headers=get_headers(self.session), json=params)
         return addAltTextResponse
 
     async def _init_logger(self, **kwargs) -> Logger:
