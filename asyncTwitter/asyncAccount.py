@@ -32,8 +32,9 @@ from .asyncLogin import asyncLogin
 
 
 class AsyncAccount:
-    async def __init__(
+    def __init__(
         self,
+        *args, 
         **kwargs,
     ):
         self.save = kwargs.get("save", True)
@@ -43,13 +44,19 @@ class AsyncAccount:
         self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
 
-    async def __ainit__(
+    async def asyncAuthenticate(
         self, email=None, username=None, password=None, session=None, **kwargs
     ):
+        
+        self.email = email
+        self.username = username
+        self.password = password
+        self.cookies = kwargs.get("cookies")
+        
         self.session = await self._async_validate_session(
             email, username, password, session, **kwargs
         )
-
+        
         return self.session
 
     async def asyncGQL(
