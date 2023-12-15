@@ -48,10 +48,17 @@ class AsyncAccount:
         self, email=None, username=None, password=None, session=None, **kwargs
     ):
         
+        """
+            This is used to authenticate the account.
+            
+            This used to be in __init__ but we can't await in __init__ so we have to do it here.
+        """
+        
         self.email = email
         self.username = username
         self.password = password
         self.cookies = kwargs.get("cookies")
+        self.proxies = kwargs.get("proxies")
         
         self.session = await self._async_validate_session(
             email, username, password, session, **kwargs
@@ -391,26 +398,26 @@ class AsyncAccount:
         settings |= {"user_id": user_id}
         return await self.asyncV1("friendships/destroy.json", settings)
 
-    async def mute(self, user_id: int) -> dict:
+    async def asyncMute(self, user_id: int) -> dict:
         return await self.asyncV1("mutes/users/create.json", {"user_id": user_id})
 
-    async def unmute(self, user_id: int) -> dict:
+    async def asyncUnmute(self, user_id: int) -> dict:
         return await self.asyncV1("mutes/users/destroy.json", {"user_id": user_id})
 
-    async def enable_follower_notifications(self, user_id: int) -> dict:
+    async def asyncEnableFollowerNotifications(self, user_id: int) -> dict:
         settings = deepcopy(follower_notification_settings)
         settings |= {"id": user_id, "device": "true"}
         return await self.asyncV1("friendships/update.json", settings)
 
-    async def disable_follower_notifications(self, user_id: int) -> dict:
+    async def disableFollowerNotifications(self, user_id: int) -> dict:
         settings = deepcopy(follower_notification_settings)
         settings |= {"id": user_id, "device": "false"}
         return await self.asyncV1("friendships/update.json", settings)
 
-    async def block(self, user_id: int) -> dict:
+    async def asyncBlock(self, user_id: int) -> dict:
         return await self.asyncV1("blocks/create.json", {"user_id": user_id})
 
-    async def unblock(self, user_id: int) -> dict:
+    async def asyncUnblock(self, user_id: int) -> dict:
         return await self.asyncV1("blocks/destroy.json", {"user_id": user_id})
 
     async def asyncUpdateProfileImage(self, media: str) -> Response:
