@@ -520,6 +520,7 @@ class Scraper:
         # queries are of type set | list[int|str], need to convert to list[dict]
         _queries = [{k: q} for q in queries for k, v in keys.items()]
         res = asyncio.run(self._process(operation, _queries, **kwargs))
+        #res = asyncio.get_event_loop().create_task(self._process(operation, _queries, **kwargs))
         data = get_json(res, **kwargs)
         return data.pop() if kwargs.get('cursor') else flatten(data)
 
