@@ -16,12 +16,10 @@ from .util import *
 class AsyncScraper:
     def __init__(
         self,
-        email: str = None,
-        username: str = None,
-        password: str = None,
-        session: AsyncClient = None,
+        makeFiles: bool = False,
         **kwargs,
     ):
+        self.makeFiles = makeFiles
         self.save = kwargs.get("save", True)
         self.debug = kwargs.get("debug", 0)
         self.pbar = kwargs.get("pbar", True)
@@ -302,9 +300,11 @@ class AsyncScraper:
             ext = urlsplit(cdn_url).path.split("/")[-1]
             try:
                 r = await client.get(cdn_url)
-                async with aiofiles.open(out / f"{name}_{ext}", "wb") as fp:
-                    for chunk in r.iter_bytes(chunk_size=chunk_size):
-                        await fp.write(chunk)
+                if self.makeFiles:
+                    print('Making files!!')
+                    async with aiofiles.open(out / f"{name}_{ext}", "wb") as fp:
+                        for chunk in r.iter_bytes(chunk_size=chunk_size):
+                            await fp.write(chunk)
             except Exception as e:
                 self.logger.error(
                     f"[{RED}error{RESET}] Failed to download media: {post_url} {e}"
@@ -929,32 +929,39 @@ class AsyncScraper:
     async def _async_validate_session(self, *args, **kwargs):
         email, username, password, session = args
 
+        # invalid credentials and session
+        cookies = kwargs.get("cookies")
+        proxies = kwargs.get("proxies")
+
+        # try validating cookies dict
+        if isinstance(cookies, dict) and all(
+            cookies.get(c) for c in {"ct0", "auth_token"}
+        ):
+            _session = AsyncClient(cookies=cookies, follow_redirects=True, proxies=proxies)
+            _session.headers.update(get_headers(_session))
+            print("Logging in from Cookies Dict 100%!!!")
+            return _session
+
+        # try validating cookies from file
+        if isinstance(cookies, str):
+            _session = AsyncClient(
+                cookies=orjson.loads(Path(cookies).read_bytes()), follow_redirects=True,
+                proxies=proxies
+            )
+            _session.headers.update(get_headers(_session))
+            print("Logging in from Cookies File 100%!!!")
+            return _session
+
         # validate credentials
         if all((email, username, password)):
+            print("Logging in from Credentials 100%!!!")
             return await asyncLogin(email, username, password, **kwargs)
 
         # invalid credentials, try validating session
         if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
             return session
 
-        # invalid credentials and session
-        cookies = kwargs.get("cookies")
 
-        # try validating cookies dict
-        if isinstance(cookies, dict) and all(
-            cookies.get(c) for c in {"ct0", "auth_token"}
-        ):
-            _session = AsyncClient(cookies=cookies, follow_redirects=True)
-            _session.headers.update(get_headers(_session))
-            return _session
-
-        # try validating cookies from file
-        if isinstance(cookies, str):
-            _session = AsyncClient(
-                cookies=orjson.loads(Path(cookies).read_bytes()), follow_redirects=True
-            )
-            _session.headers.update(get_headers(_session))
-            return _session
 
         # no session, credentials, or cookies provided. use guest session.
         if self.debug:

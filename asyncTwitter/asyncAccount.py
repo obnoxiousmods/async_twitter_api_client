@@ -57,6 +57,8 @@ class AsyncAccount:
         self.email = email
         self.username = username
         self.password = password
+        self.twitterId = False
+        self.twitterRestId = False
         self.cookies = kwargs.get("cookies")
         self.proxies = kwargs.get("proxies")
         
@@ -702,17 +704,6 @@ class AsyncAccount:
     async def _async_validate_session(*args, **kwargs):
         email, username, password, session = args
 
-        # validate credentials
-        if all((email, username, password)):
-            session = await asyncLogin(email, username, password, **kwargs)
-            session._init_with_cookies = False
-            return session
-
-        # invalid credentials, try validating session
-        if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
-            session._init_with_cookies = True
-            return session
-
         # invalid credentials and session
         cookies = kwargs.get("cookies")
 
@@ -727,6 +718,7 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
+            print("Logging with cookies Dict 100%")
             return _session
 
         # try validating cookies from file
@@ -738,7 +730,22 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
+            print("Logging with cookies File 100%")
             return _session
+
+
+        # validate credentials
+        if all((email, username, password)):
+            session = await asyncLogin(email, username, password, **kwargs)
+            session._init_with_cookies = False
+            print("Logging with user pass 100%")
+            return session
+
+        # invalid credentials, try validating session
+        if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
+            session._init_with_cookies = True
+            return session
+
 
         raise Exception(
             "Session not authenticated. "
@@ -751,7 +758,7 @@ class AsyncAccount:
         addAltTextResponse = await self.session.post(url, headers=get_headers(self.session), json=params)
         return addAltTextResponse
 
-    async def _init_logger(self, **kwargs) -> Logger:
+    def _init_logger(self, **kwargs) -> Logger:
         if kwargs.get("debug"):
             cfg = kwargs.get("log_config")
             logging.config.dictConfig(cfg or LOG_CONFIG)
