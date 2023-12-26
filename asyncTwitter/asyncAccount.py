@@ -5,6 +5,7 @@ import hashlib
 import time
 import logging
 import math
+import re
 
 from logging import Logger
 from copy import deepcopy
@@ -772,3 +773,13 @@ class AsyncAccount:
                     logging.getLogger(name).setLevel(logging.ERROR)
 
             return logging.getLogger(logger_name)
+
+    @property
+    def id(self) -> int:
+        """ Get User ID """
+        return int(re.findall('"u=(\d+)"', self.session.cookies.get('twid'))[0])
+
+    def save_cookies(self, fname: str = None):
+        """ Save cookies to file """
+        cookies = self.session.cookies
+        Path(f'{fname or cookies.get("username")}.cookies').write_bytes(orjson.dumps(dict(cookies)))
