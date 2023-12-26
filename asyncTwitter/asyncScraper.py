@@ -21,13 +21,16 @@ class AsyncScraper:
     ):
         self.makeFiles = makeFiles
         self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", 0)
+        self.debug = kwargs.get("debug", True)
         self.pbar = kwargs.get("pbar", True)
         self.out = Path(kwargs.get("out", "data"))
         self.guest = False
         self.logger = self._init_logger(**kwargs)
+        self.max_connections = kwargs.get("max_connections", 100)
         
-    async def asyncAuthenticate(self, email=None, username=None, password=None, session=None, **kwargs):
+        #print(f'Logger: {self.logger}')
+    
+    async def asyncAuthenticate(self, email:str=None, username:str=None, password:str=None, session=AsyncClient, **kwargs):
         self.email = email
         self.username = username
         self.password = password
@@ -288,7 +291,7 @@ class AsyncScraper:
 
         async def process():
             async with AsyncClient(
-                headers=self.session.headers, cookies=self.session.cookies
+                headers=self.session.headers, cookies=self.session.cookies, proxies=self.proxies
             ) as client:
                 tasks = (download(client, x, y) for x, y in urls)
                 if self.pbar:
@@ -301,7 +304,7 @@ class AsyncScraper:
             try:
                 r = await client.get(cdn_url)
                 if self.makeFiles:
-                    print('Making files!!')
+                    #print('Making files!!')
                     async with aiofiles.open(out / f"{name}_{ext}", "wb") as fp:
                         for chunk in r.iter_bytes(chunk_size=chunk_size):
                             await fp.write(chunk)
@@ -534,7 +537,7 @@ class AsyncScraper:
 
         async def process():
             (self.out / "raw").mkdir(parents=True, exist_ok=True)
-            limits = Limits(max_connections=100, max_keepalive_connections=10)
+            limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
@@ -556,7 +559,7 @@ class AsyncScraper:
             return rest_id, r
 
         async def process(data: list[dict]) -> list:
-            limits = Limits(max_connections=100, max_keepalive_connections=10)
+            limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
@@ -592,7 +595,7 @@ class AsyncScraper:
             return {"space": space, "stream": stream}
 
         async def process():
-            limits = Limits(max_connections=100, max_keepalive_connections=10)
+            limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
@@ -646,11 +649,11 @@ class AsyncScraper:
         return r
 
     async def _process(self, operation: tuple, queries: list[dict], **kwargs):
-        limits = Limits(max_connections=100, max_keepalive_connections=10)
+        limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
         headers = self.session.headers if self.guest else get_headers(self.session)
         cookies = self.session.cookies
         async with AsyncClient(
-            limits=limits, headers=headers, cookies=cookies, timeout=20
+            limits=limits, headers=headers, cookies=cookies, timeout=20, proxies=self.proxies
         ) as c:
             tasks = (self._paginate(c, operation, **q, **kwargs) for q in queries)
             if self.pbar:
@@ -670,7 +673,9 @@ class AsyncScraper:
         else:
             try:
                 r = await self._query(client, operation, **kwargs)
+                print(f'{r.text}', file=open('initial_data.txt', 'a'))
                 initial_data = r.json()
+                
                 res = [r]
                 # ids = get_ids(initial_data, operation) # todo
                 ids = set(find_key(initial_data, "rest_id"))
@@ -795,7 +800,7 @@ class AsyncScraper:
             )
             return r.json()
 
-        limits = Limits(max_connections=100)
+        limits = Limits(max_connections=self.max_connections)
         async with AsyncClient(headers=client.headers, limits=limits, timeout=30) as c:
             tasks = (get(c, _id) for _id in spaces)
             if self.pbar:
@@ -900,7 +905,7 @@ class AsyncScraper:
             return {"space": space, "chunks": sort_chunks(all_chunks)}
 
         async def process(spaces: list[dict]):
-            limits = Limits(max_connections=100)
+            limits = Limits(max_connections=self.max_connections)
             headers, cookies = self.session.headers, self.session.cookies
             async with AsyncClient(
                 limits=limits, headers=headers, cookies=cookies, timeout=20
@@ -912,7 +917,7 @@ class AsyncScraper:
         return await process(spaces)
 
     def _init_logger(self, **kwargs) -> Logger:
-        if kwargs.get("debug"):
+        if self.debug:
             cfg = kwargs.get("log_config")
             logging.config.dictConfig(cfg or LOG_CONFIG)
 
@@ -925,6 +930,8 @@ class AsyncScraper:
                     logging.getLogger(name).setLevel(logging.ERROR)
 
             return logging.getLogger(logger_name)
+        else:
+            print('No debug/logger')
 
     async def _async_validate_session(self, *args, **kwargs):
         email, username, password, session = args
@@ -939,7 +946,7 @@ class AsyncScraper:
         ):
             _session = AsyncClient(cookies=cookies, follow_redirects=True, proxies=proxies)
             _session.headers.update(get_headers(_session))
-            print("Logging in from Cookies Dict 100%!!!")
+            #print("Logging in from Cookies Dict 100%!!!")
             return _session
 
         # try validating cookies from file
@@ -949,12 +956,12 @@ class AsyncScraper:
                 proxies=proxies
             )
             _session.headers.update(get_headers(_session))
-            print("Logging in from Cookies File 100%!!!")
+            #print("Logging in from Cookies File 100%!!!")
             return _session
 
         # validate credentials
         if all((email, username, password)):
-            print("Logging in from Credentials 100%!!!")
+            #print("Logging in from Credentials 100%!!!")
             return await asyncLogin(email, username, password, **kwargs)
 
         # invalid credentials, try validating session
@@ -968,6 +975,21 @@ class AsyncScraper:
             )
         self.guest = True
         return session
+
+    def _init_logger(self, **kwargs) -> Logger:
+        if kwargs.get('debug'):
+            cfg = kwargs.get('log_config')
+            logging.config.dictConfig(cfg or LOG_CONFIG)
+
+            # only support one logger
+            logger_name = list(LOG_CONFIG['loggers'].keys())[0]
+
+            # set level of all other loggers to ERROR
+            for name in logging.root.manager.loggerDict:
+                if name != logger_name:
+                    logging.getLogger(name).setLevel(logging.ERROR)
+
+            return logging.getLogger(logger_name)
 
     @property
     def id(self) -> int:

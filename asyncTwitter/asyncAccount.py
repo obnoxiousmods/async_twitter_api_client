@@ -39,14 +39,17 @@ class AsyncAccount:
         **kwargs,
     ):
         self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", 0)
+        self.debug = kwargs.get("debug", True)
+        self.twid = kwargs.get("twid", False)
         self.gql_api = "https://twitter.com/i/api/graphql"
         self.v1_api = "https://api.twitter.com/1.1"
         self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
+        
+        #print(f'AsyncAcc Logger: {self.logger}')
 
     async def asyncAuthenticate(
-        self, email=None, username=None, password=None, session=None, **kwargs
+        self, email:str=None, username:str=None, password:str=None, session:AsyncClient=None, **kwargs
     ):
         
         """
@@ -63,8 +66,10 @@ class AsyncAccount:
         self.cookies = kwargs.get("cookies")
         self.proxies = kwargs.get("proxies")
         
+        #print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
+        
         self.session = await self._async_validate_session(
-            email, username, password, **kwargs
+            self.email, self.username, self.password, session, **kwargs
         )
         
         return self.session
@@ -702,15 +707,8 @@ class AsyncAccount:
         # self.logger.debug
 
     @staticmethod
-    async def _async_validate_session(*args, **kwargs):
-        email, username, password, session = args
-
-        # validate credentials
-        if all((email, username, password)):
-            session = await asyncLogin(email, username, password, **kwargs)
-            session._init_with_cookies = False
-            print("Logging with user pass 100%")
-            return session
+    async def _async_validate_session(email, username, password, session, **kwargs):
+        #print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
         # invalid credentials and session
         cookies = kwargs.get("cookies")
@@ -726,7 +724,7 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            print("Logging with cookies Dict 100%")
+            #print("Logging with cookies Dict 100%")
             return _session
 
         # try validating cookies from file
@@ -738,8 +736,15 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            print("Logging with cookies File 100%")
+            #print("Logging with cookies File 100%")
             return _session
+
+        # validate credentials
+        if all((email, username, password)):
+            session = await asyncLogin(email, username, password, **kwargs)
+            session._init_with_cookies = False
+            print("Logging with user pass 100%")
+            return session
 
         # invalid credentials, try validating session
         if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
@@ -759,7 +764,7 @@ class AsyncAccount:
         return addAltTextResponse
 
     def _init_logger(self, **kwargs) -> Logger:
-        if kwargs.get("debug"):
+        if self.debug:
             cfg = kwargs.get("log_config")
             logging.config.dictConfig(cfg or LOG_CONFIG)
 
@@ -773,12 +778,16 @@ class AsyncAccount:
 
             return logging.getLogger(logger_name)
 
-    @property
     def id(self) -> int:
         """ Get User ID """
-        return int(re.findall('"u=(\d+)"', self.session.cookies.get('twid'))[0])
+        if not self.twid:
+            self.twid = int(re.findall('"u=(\d+)"', self.session.cookies.get('twid'))[0])
 
-    def save_cookies(self, fname: str = None):
+        return self.twid
+
+    def save_cookies(self, fname: str = None, toFile=True):
         """ Save cookies to file """
         cookies = self.session.cookies
-        Path(f'{fname or cookies.get("username")}.cookies').write_bytes(orjson.dumps(dict(cookies)))
+        if toFile:
+            Path(f'{fname or cookies.get("username")}.cookies').write_bytes(orjson.dumps(dict(cookies)))
+        return dict(cookies)
