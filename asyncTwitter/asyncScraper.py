@@ -961,8 +961,6 @@ class AsyncScraper:
         if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
             return session
 
-
-
         # no session, credentials, or cookies provided. use guest session.
         if self.debug:
             self.logger.warning(
@@ -976,9 +974,11 @@ class AsyncScraper:
         """Get User ID"""
         return int(re.findall('"u=(\d+)"', self.session.cookies.get("twid"))[0])
 
-    def save_cookies(self, fname: str = None):
+    def save_cookies(self, fname: str = None, toFile=True):
         """Save cookies to file"""
         cookies = self.session.cookies
-        Path(f'{fname or cookies.get("username")}.cookies').write_bytes(
-            orjson.dumps(dict(cookies))
-        )
+        if toFile:
+            Path(f'{fname or cookies.get("username")}.cookies').write_bytes(
+                orjson.dumps(dict(cookies))
+            )
+        return dict(cookies)
