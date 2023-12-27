@@ -39,7 +39,7 @@ class AsyncAccount:
         **kwargs,
     ):
         self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", True)
+        self.debug = kwargs.get("debug", False)
         self.twid = kwargs.get("twid", False)
         self.gql_api = "https://twitter.com/i/api/graphql"
         self.v1_api = "https://api.twitter.com/1.1"
@@ -187,7 +187,7 @@ class AsyncAccount:
                     media_id = await self._async_upload_media(m["media"])
                     variables["post_tweet_request"]["media_ids"].append(media_id)
                     if alt := m.get("alt"):
-                        self._async_add_alt_text(media_id, alt)
+                        await self._async_add_alt_text(media_id, alt)
 
             if schedule:
                 variables["execute_at"] = (
@@ -205,11 +205,12 @@ class AsyncAccount:
         if media:
             for m in media:
                 media_id = await self._async_upload_media(m["media"])
+                print(f"Media: {media_id}")
                 variables["media"]["media_entities"].append(
                     {"media_id": media_id, "tagged_users": m.get("tagged_users", [])}
                 )
                 if alt := m.get("alt"):
-                    self._async_add_alt_text(media_id, alt)
+                    await self._async_add_alt_text(media_id, alt)
 
         return await self.asyncGQL("POST", Operation.CreateTweet, variables)
 
@@ -232,7 +233,7 @@ class AsyncAccount:
                 media_id = await self._async_upload_media(m["media"])
                 variables["post_tweet_request"]["media_ids"].append(media_id)
                 if alt := m.get("alt"):
-                    self._async_add_alt_text(media_id, alt)
+                    await self._async_add_alt_text(media_id, alt)
         return await self.asyncGQL("POST", Operation.CreateScheduledTweet, variables)
     
     async def asyncScheduleReply(
@@ -257,7 +258,7 @@ class AsyncAccount:
                 media_id = await self._async_upload_media(m["media"])
                 variables["post_tweet_request"]["media_ids"].append(media_id)
                 if alt := m.get("alt"):
-                    self._async_add_alt_text(media_id, alt)
+                    await self._async_add_alt_text(media_id, alt)
         return await self.asyncGQL("POST", Operation.CreateScheduledTweet, variables)
 
     async def asyncUnscheduleTweet(self, tweet_id: int) -> dict:
@@ -555,19 +556,19 @@ class AsyncAccount:
         https://developer.twitter.com/en/docs/twitter-api/v1/media/upload-media/uploading-media/media-best-practices
         """
 
-        async def format_size(size: int) -> str:
+        def format_size(size: int) -> str:
             return f"{(size / 1e6):.2f} MB"
 
-        async def create_error_message(category: str, size: int, max_size: int) -> str:
-            return f"cannot upload {await format_size(size)} {category}, max size is {await format_size(max_size)}"
+        def create_error_message(category: str, size: int, max_size: int) -> str:
+            return f"cannot upload {format_size(size)} {category}, max size is {format_size(max_size)}"
 
-        async def check_media(category: str, size: int) -> None:
+        def check_media(category: str, size: int) -> None:
             if category == "image" and size > MAX_IMAGE_SIZE:
-                raise Exception(await create_error_message(category, size, MAX_IMAGE_SIZE))
+                raise Exception(create_error_message(category, size, MAX_IMAGE_SIZE))
             if category == "gif" and size > MAX_GIF_SIZE:
-                raise Exception(await create_error_message(category, size, MAX_GIF_SIZE))
+                raise Exception(create_error_message(category, size, MAX_GIF_SIZE))
             if category == "video" and size > MAX_VIDEO_SIZE:
-                raise Exception(await create_error_message(category, size, MAX_VIDEO_SIZE))
+                raise Exception(create_error_message(category, size, MAX_VIDEO_SIZE))
 
         # if is_profile:
         #     url = 'https://upload.twitter.com/i/media/upload.json'
@@ -588,7 +589,7 @@ class AsyncAccount:
             else f'{upload_type}_{media_type.split("/")[0]}'
         )
 
-        await check_media(media_category, total_bytes)
+        check_media(media_category, total_bytes)
 
         params = {
             "command": "INIT",
@@ -603,7 +604,7 @@ class AsyncAccount:
         if uploadMediaResponse.status_code >= 400:
             raise Exception(f"{uploadMediaResponse.text}")
 
-        media_id = uploadMediaResponse.json()["media_id"]
+        media_id = uploadMediaResponse.json().get("media_id_string")
 
         desc = f"uploading: {file.name}"
         with tqdm(
@@ -670,11 +671,13 @@ class AsyncAccount:
                     pbar.update(fp.tell() - pbar.n)
 
         params = {"command": "FINALIZE", "media_id": media_id, "allow_async": "true"}
+        
         if is_dm:
             params |= {"original_md5": hashlib.md5(file.read_bytes()).hexdigest()}
         uploadMediaResponse = await self.session.post(
             url=url, headers=headers, params=params
         )
+
         if uploadMediaResponse.status_code == 400:
             self.logger.debug(
                 f"{RED}{uploadMediaResponse.status_code} {uploadMediaResponse.text}{RESET}"
@@ -684,6 +687,7 @@ class AsyncAccount:
         # self.logger.debug(f'processing, please wait...')
         processing_info = uploadMediaResponse.json().get("processing_info")
         while processing_info:
+            print("entering processing info loop")
             state = processing_info["state"]
             if error := processing_info.get("error"):
                 self.logger.debug(f"{RED}{error}{RESET}")
@@ -703,8 +707,12 @@ class AsyncAccount:
             uploadMediaResponse = await self.session.get(
                 url=url, headers=headers, params=params
             )
+            print(f"Status Response: {uploadMediaResponse.text}")
+            print(f"Status Response Status: {uploadMediaResponse.status_code}")
             processing_info = uploadMediaResponse.json().get("processing_info")
         # self.logger.debug
+        
+        return uploadMediaResponse.json().get("media_id_string")
 
     @staticmethod
     async def _async_validate_session(email, username, password, session, **kwargs):
@@ -743,7 +751,7 @@ class AsyncAccount:
         if all((email, username, password)):
             session = await asyncLogin(email, username, password, **kwargs)
             session._init_with_cookies = False
-            print("Logging with user pass 100%")
+            #print("Logging with user pass 100%")
             return session
 
         # invalid credentials, try validating session

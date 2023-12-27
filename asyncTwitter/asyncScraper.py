@@ -21,7 +21,7 @@ class AsyncScraper:
     ):
         self.makeFiles = makeFiles
         self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", True)
+        self.debug = kwargs.get("debug", False)
         self.pbar = kwargs.get("pbar", True)
         self.out = Path(kwargs.get("out", "data"))
         self.guest = False
@@ -930,8 +930,6 @@ class AsyncScraper:
                     logging.getLogger(name).setLevel(logging.ERROR)
 
             return logging.getLogger(logger_name)
-        else:
-            print('No debug/logger')
 
     async def _async_validate_session(self, *args, **kwargs):
         email, username, password, session = args
@@ -975,21 +973,6 @@ class AsyncScraper:
             )
         self.guest = True
         return session
-
-    def _init_logger(self, **kwargs) -> Logger:
-        if kwargs.get('debug'):
-            cfg = kwargs.get('log_config')
-            logging.config.dictConfig(cfg or LOG_CONFIG)
-
-            # only support one logger
-            logger_name = list(LOG_CONFIG['loggers'].keys())[0]
-
-            # set level of all other loggers to ERROR
-            for name in logging.root.manager.loggerDict:
-                if name != logger_name:
-                    logging.getLogger(name).setLevel(logging.ERROR)
-
-            return logging.getLogger(logger_name)
 
     @property
     def id(self) -> int:
