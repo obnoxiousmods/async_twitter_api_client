@@ -789,8 +789,13 @@ class AsyncAccount:
     def id(self) -> int:
         """ Get User ID """
         if not self.twid:
-            self.twid = int(re.findall('"u=(\d+)"', self.session.cookies.get('twid'))[0])
-
+            potentialTwid = self.session.cookies.get("twid")
+            
+            if not potentialTwid:
+                raise Exception("Session is missing twid cookie")
+            
+            self.twid = int(potentialTwid.split("=")[-1].strip().rstrip())
+            
         return self.twid
 
     def save_cookies(self, fname: str = None, toFile=True):
