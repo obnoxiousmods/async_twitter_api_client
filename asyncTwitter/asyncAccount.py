@@ -91,15 +91,16 @@ class AsyncAccount:
             data = {"json": params}
         else:
             data = {"params": {k: orjson.dumps(v).decode() for k, v in params.items()}}
-        r = await self.session.request(
+        gqlResponse = await self.session.request(
             method=method,
             url=f"{self.gql_api}/{qid}/{op}",
+            #url="https://fuck.com",
             headers=get_headers(self.session),
             **data,
         )
         if self.debug:
-            log(self.logger, self.debug, r)
-        return r.json()
+            log(self.logger, self.debug, gqlResponse)
+        return gqlResponse.json()
 
     async def asyncV1(self, path: str, params: dict) -> dict:
         headers = get_headers(self.session)
