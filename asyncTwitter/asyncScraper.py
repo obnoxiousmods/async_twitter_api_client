@@ -624,7 +624,7 @@ class AsyncScraper:
             return get_json(data, **kwargs)
 
         # queries are of type set | list[int|str], need to convert to list[dict]
-        _queries = [{k: q} for q in queries for k, v in keys.items()]
+        _queries = [{dictKey: query} for query in queries for dictKey, dictValue in keys.items()]
 
         # res = asyncio.run(self._process(operation, _queries, **kwargs))
         res = await self._process(operation, _queries, **kwargs)
@@ -656,6 +656,10 @@ class AsyncScraper:
             limits=limits, headers=headers, cookies=cookies, timeout=20, proxies=self.proxies
         ) as c:
             tasks = (self._paginate(c, operation, **q, **kwargs) for q in queries)
+            
+            if kwargs.pop('newest', None): # Do not attempt to get all tweets, get first page
+                tasks = [tasks[0]] # Only get first page
+            
             if self.pbar:
                 return await tqdm_asyncio.gather(*tasks, desc=operation[-1])
             return await asyncio.gather(*tasks)
