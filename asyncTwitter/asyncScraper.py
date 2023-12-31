@@ -655,10 +655,14 @@ class AsyncScraper:
         async with AsyncClient(
             limits=limits, headers=headers, cookies=cookies, timeout=20, proxies=self.proxies
         ) as c:
-            tasks = (self._paginate(c, operation, **q, **kwargs) for q in queries)
             
-            if kwargs.pop('newest', None): # Do not attempt to get all tweets, get first page
-                tasks = [tasks[0]] # Only get first page
+            # Limit queries to 1
+            queryLimit = kwargs.pop("queryLimit", False)
+            
+            if queryLimit:
+                queries = queries[:queryLimit]
+                
+            tasks = (self._paginate(c, operation, **q, **kwargs) for q in queries)
             
             if self.pbar:
                 return await tqdm_asyncio.gather(*tasks, desc=operation[-1])
@@ -677,7 +681,6 @@ class AsyncScraper:
         else:
             try:
                 r = await self._query(client, operation, **kwargs)
-                print(f'{r.text}', file=open('initial_data.txt', 'a'))
                 initial_data = r.json()
                 
                 res = [r]
