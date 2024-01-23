@@ -9,7 +9,7 @@ from trio import run
 async def mainFunc():
     twitter = asyncAccount()
 
-    initResults = await twitter.__ainit__(cookies="cookies/obJellyfin.cookies")
+    initResults = await twitter.asyncAuthenticate(cookies="cookies/obJellyfin.cookies")
     print(initResults)
 
     await twitter.asyncTweet(text="Async tweet testing 123")
