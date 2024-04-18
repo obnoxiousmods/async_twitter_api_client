@@ -1,8 +1,8 @@
 import sys
 
 from httpx import AsyncClient
-
-from .constants import YELLOW, RED, BOLD, RESET
+from secrets import choice
+from .constants import YELLOW, RED, BOLD, RESET, USER_AGENTS
 from .util import find_key
 
 
@@ -241,7 +241,7 @@ async def asyncLogin(email: str, username: str, password: str, **kwargs) -> Asyn
         headers={
             "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
             "content-type": "application/json",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+            "user-agent": choice(USER_AGENTS),
             "x-twitter-active-user": "yes",
             "x-twitter-client-language": "en",
         },
