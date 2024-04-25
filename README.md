@@ -1,4 +1,5 @@
-# async-twitter-api-client
+# asyncTwitterClient
+
 Async port of twitter-api-client
 
 ~ of 2024-04-24 this is being maintained as its being used in a project im being paid to maintain ~
@@ -6,7 +7,7 @@ Async port of twitter-api-client
 MASSIVE Thank you to Trevor Hobenshield @trevorhobenshield for making this!
 All I have done is changed the client to asyncClient 
 
-Key Differences:
+# Key Differences
 
 linted by ruff
 renames tweet and other functions to asyncTweet asyncReply etc
@@ -15,6 +16,8 @@ uses httpx asyncclient instead of Client so it supports anyio, trio, curio, asyn
 natively supports proxies, http(s)+socks5
 reply & quote support uploading images
 
+Original search.py uses asyncio.gather(), i switched to use anyio.create_task_group() with a results list that the tasks append to, might not be a 1:1 behaviour
+
 # Todo
 ```
 Solve & Submit captcha to unlock account using various captcha solving providers
@@ -22,7 +25,8 @@ Maybe fix searching somehwat?
 Add signup
 ```
 
-Original search.py uses asyncio.gather(), i switched to use anyio.create_task_group() with a results list that the tasks append to, might not be a 1:1 behaviour
+
+
 
 ```pip install asyncTwitterClient```
 
