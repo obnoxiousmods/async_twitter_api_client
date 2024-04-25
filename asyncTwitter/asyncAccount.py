@@ -23,7 +23,7 @@ from .constants import (
     follow_settings,
     follower_notification_settings,
 )
-from .util import get_headers, log, urlencode, find_key, RED, RESET, Path, get_cursor
+from .util import get_headers, log, urlencode, find_key, RED, RESET, Path, get_cursor, GREEN
 from uuid import uuid1, getnode
 from string import ascii_letters
 from twoCaptcha import TwoCaptcha
@@ -51,7 +51,7 @@ class AsyncAccount:
 
         # print(f'AsyncAcc Logger: {self.logger}')
 
-    async def unlockViaArkoseCaptcha(self):
+    async def unlockViaArkoseCaptcha(self) -> dict:
         """
         This method is used to unlock the account via Arkose Captcha.
         """
@@ -142,10 +142,36 @@ class AsyncAccount:
             unlocked = False
 
         if self.debug:
-            self.logger.debug(f"Unlocked: {unlocked}")
+            self.logger.debug(f"Captcha Unlock: {unlocked} | Checking final stage...")
             print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
 
-        return unlockResponse
+        if unlocked:
+            authenticityToken = unlockResponse.text.split(
+                '<input type="hidden" name="authenticity_token" value="'
+            )[1].split('"')[0]
+            assignmentToken = unlockResponse.text.split(
+                '<input type="hidden" name="assignment_token" value="'
+            )[1].split('"')[0]
+            finishPayload = {
+                'authenticity_token': authenticityToken,
+                'assignment_token': assignmentToken,
+                'lang': 'en',
+                'flow': '',
+                'ui_metrics': '{"rf":{"a164b41fad0433b3eb8ef1474015a1c192606f211d5cab98860739135a6f57d2":-111,"a846abda2338f92a076af6e5f40e8171ddfa1f5f802abc62f1fb39cfd0138301":-1,"ace36e17c04cb2475c443874a57310e469013dbecf948d84137d12b6ad71e025":0,"a25211b004a8e34850978eeb17bab27bca8653a820c1c58442766f317ce2f965":-128},"s":"s0TtDv7i3G_2y2Dx1m-IOiI6st_0zRgRrfYDgKHX7jpHDp0q0bm2Bj7youdKVhxivyJTOpD0t6QrhVGbeUwN3rGreAE2p06HTYtVT_iWDmwdHTmbrOoFM4ws3pNLHb7AGB6ceguzlW8J51qGwY1DrCLFxMFm3_rQ6T0Cu7gp1CsVutURjyEdzecozhS57mEaryVBaxImglAON7SbByk-cOj5FMki6pH3SxFvaOaA3A1Y7CiOU7pQ07KdFhCUcyfM1xkWY3kdH9-lw9sOPBaTrjX15d0L6RTnEcsqtINE8NNZJ5QFaXLNbrlEtSGW29ugUlZphX5Z24iM1-Zn6g6uBgAAAY8W4QwM"}',
+            }
+            finishUnlockResp = await newClient.post(endpointUrl, data=finishPayload, follow_redirects=True)
+            
+            if str(finishUnlockResp.url) == "https://twitter.com/?lang=en":
+                unlocked = True
+                if self.debug:
+                    self.logger.debug(f"{GREEN}Account Unlocked Successfully!!!{RESET}")
+            else:
+                unlocked = False
+                if self.debug:
+                    self.logger.debug(f"{RED}Failed to unlock account.{RESET}")
+                    
+
+        return {"success": unlocked}
 
     async def asyncAuthenticate(
         self,

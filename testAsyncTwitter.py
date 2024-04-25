@@ -31,11 +31,17 @@ async def testAccount():
         cookies="C:/Users/a/Documents/Git/infiniteMoneyTwitterBot/cookies/obJellyfin.cookies"
     )
     
-    results1 = await twitter.asyncTweet(text=f"A test tweet from the asyncTwitter module! {secrets.token_hex(16)}")
+    results1 = await twitter.asyncLike(tweet_id="1783497801906696316")
+
+    if 'this account is temporarily locked.' in str(results1):
+        print('Account is locked. Unlocking...')
+    else:
+        print('Account is not locked.')
+        exit()
 
     results = await twitter.unlockViaArkoseCaptcha()
     
-    print(results.text)
+    print(results)
 
     # results = await twitter.asyncTweet(text="A test tweet from the asyncTwitter module!")
     # scheduleTweetResults = await twitter.asyncScheduleTweet(
