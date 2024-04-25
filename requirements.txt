@@ -1,0 +1,7 @@
+httpx
+anyio
+trio
+httpx[socks]
+httpx-socks
+twitter-api-client
+colorama
