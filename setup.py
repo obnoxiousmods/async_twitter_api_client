@@ -10,7 +10,7 @@ with open('requirements.txt', 'r', encoding='utf-8') as fh:
 
 setup(
     name='asyncTwitterClient',
-    version='0.2.0',
+    version='0.3.0',
     author='obnoxious',
     author_email='obnoxious@dongcorp.org',
     description='A async port of twitter-api-client with extra features',
