@@ -26,7 +26,7 @@ from .constants import (
 from .util import get_headers, log, urlencode, find_key, RED, RESET, Path, get_cursor, GREEN
 from uuid import uuid1, getnode
 from string import ascii_letters
-from twoCaptcha import TwoCaptcha
+from asyncTwitter.twoCaptcha import TwoCaptcha
 
 from .asyncLogin import asyncLogin
 
