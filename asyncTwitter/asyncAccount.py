@@ -34,7 +34,7 @@ from .asyncLogin import asyncLogin
 class AsyncAccount:
     def __init__(
         self,
-        *args, 
+        *args,
         **kwargs,
     ):
         self.save = kwargs.get("save", True)
@@ -45,19 +45,23 @@ class AsyncAccount:
         self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
-        
-        #print(f'AsyncAcc Logger: {self.logger}')
+
+        # print(f'AsyncAcc Logger: {self.logger}')
 
     async def asyncAuthenticate(
-        self, email:str=None, username:str=None, password:str=None, session:AsyncClient=None, **kwargs
+        self,
+        email: str = None,
+        username: str = None,
+        password: str = None,
+        session: AsyncClient = None,
+        **kwargs,
     ):
-        
         """
-            This is used to authenticate the account.
-            
-            This used to be in __init__ but we can't await in __init__ so we have to do it here.
+        This is used to authenticate the account.
+
+        This used to be in __init__ but we can't await in __init__ so we have to do it here.
         """
-        
+
         self.email = email
         self.username = username
         self.password = password
@@ -65,13 +69,13 @@ class AsyncAccount:
         self.twitterRestId = False
         self.cookies = kwargs.get("cookies")
         self.proxies = kwargs.get("proxies")
-        
-        #print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
-        
+
+        # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
+
         self.session = await self._async_validate_session(
             self.email, self.username, self.password, session, **kwargs
         )
-        
+
         return self.session
 
     async def asyncGQL(
@@ -94,11 +98,13 @@ class AsyncAccount:
         gqlResponse = await self.session.request(
             method=method,
             url=f"{self.gql_api}/{qid}/{op}",
-            #url="https://fuck.com",
+            # url="https://fuck.com",
             headers=get_headers(self.session),
             **data,
         )
-        self.rate_limits[op] = {k: int(v) for k, v in gqlResponse.headers.items() if 'rate-limit' in k}
+        self.rate_limits[op] = {
+            k: int(v) for k, v in gqlResponse.headers.items() if "rate-limit" in k
+        }
         if self.debug:
             log(self.logger, self.debug, gqlResponse)
         return gqlResponse.json()
@@ -216,7 +222,9 @@ class AsyncAccount:
 
         return await self.asyncGQL("POST", Operation.CreateTweet, variables)
 
-    async def asyncScheduleTweet(self, text: str, date: int | str, *, media: list = None) -> dict:
+    async def asyncScheduleTweet(
+        self, text: str, date: int | str, *, media: list = None
+    ) -> dict:
         variables = {
             "post_tweet_request": {
                 "auto_populate_reply_metadata": False,
@@ -237,7 +245,7 @@ class AsyncAccount:
                 if alt := m.get("alt"):
                     await self._async_add_alt_text(media_id, alt)
         return await self.asyncGQL("POST", Operation.CreateScheduledTweet, variables)
-    
+
     async def asyncScheduleReply(
         self, text: str, date: int | str, tweet_id: int, *, media: list = None
     ) -> dict:
@@ -271,7 +279,7 @@ class AsyncAccount:
         variables = {"tweet_id": tweet_id, "dark_request": False}
         return await self.asyncGQL("POST", Operation.DeleteTweet, variables)
 
-    async def asyncReply(self, text: str, tweet_id: int) -> dict:
+    async def asyncReply(self, text: str, tweet_id: int, media: list = None) -> dict:
         variables = {
             "tweet_text": text,
             "reply": {
@@ -281,15 +289,25 @@ class AsyncAccount:
             "batch_compose": "BatchSubsequent",
             "dark_request": False,
             "media": {
-                
                 "media_entities": [],
                 "possibly_sensitive": False,
             },
             "semantic_annotation_ids": [],
         }
+
+        if media:
+            for m in media:
+                media_id = await self._async_upload_media(m["media"])
+                print(f"Media: {media_id}")
+                variables["media"]["media_entities"].append(
+                    {"media_id": media_id, "tagged_users": m.get("tagged_users", [])}
+                )
+                if alt := m.get("alt"):
+                    await self._async_add_alt_text(media_id, alt)
+
         return await self.asyncGQL("POST", Operation.CreateTweet, variables)
 
-    async def asyncQuote(self, text: str, tweet_id: int) -> dict:
+    async def asyncQuote(self, text: str, tweet_id: int, media: list = None) -> dict:
         variables = {
             "tweet_text": text,
             # can use `i` as it resolves to screen_name
@@ -301,6 +319,17 @@ class AsyncAccount:
             },
             "semantic_annotation_ids": [],
         }
+
+        if media:
+            for m in media:
+                media_id = await self._async_upload_media(m["media"])
+                print(f"Media: {media_id}")
+                variables["media"]["media_entities"].append(
+                    {"media_id": media_id, "tagged_users": m.get("tagged_users", [])}
+                )
+                if alt := m.get("alt"):
+                    await self._async_add_alt_text(media_id, alt)
+
         return await self.asyncGQL("POST", Operation.CreateTweet, variables)
 
     async def asyncRetweet(self, tweet_id: int) -> dict:
@@ -354,7 +383,9 @@ class AsyncAccount:
         @param list_ids: list of list ids to pin
         @return: response
         """
-        return await self.asyncGQL("POST", Operation.ListsPinMany, {"listIds": list_ids})
+        return await self.asyncGQL(
+            "POST", Operation.ListsPinMany, {"listIds": list_ids}
+        )
 
     async def asyncPinList(self, list_id: int) -> dict:
         return await self.asyncGQL("POST", Operation.ListPinOne, {"listId": list_id})
@@ -381,13 +412,19 @@ class AsyncAccount:
         return await self.asyncGQL("POST", Operation.EditListBanner, variables)
 
     async def asyncDeleteListBanner(self, list_id: int) -> dict:
-        return await self.asyncGQL("POST", Operation.DeleteListBanner, {"listId": list_id})
+        return await self.asyncGQL(
+            "POST", Operation.DeleteListBanner, {"listId": list_id}
+        )
 
     async def asyncFollowTopic(self, topic_id: int) -> dict:
-        return await self.asyncGQL("POST", Operation.TopicFollow, {"topicId": str(topic_id)})
+        return await self.asyncGQL(
+            "POST", Operation.TopicFollow, {"topicId": str(topic_id)}
+        )
 
     async def asyncUnfollowTopic(self, topic_id: int) -> dict:
-        return await self.asyncGQL("POST", Operation.TopicUnfollow, {"topicId": str(topic_id)})
+        return await self.asyncGQL(
+            "POST", Operation.TopicUnfollow, {"topicId": str(topic_id)}
+        )
 
     async def asyncPin(self, tweet_id: int) -> dict:
         return await self.asyncV1(
@@ -436,7 +473,9 @@ class AsyncAccount:
         url = f"{self.v1_api}/account/update_profile_image.json"
         headers = get_headers(self.session)
         params = {"media_id": media_id}
-        updateProfileImageResponse = await self.session.post(url, headers=headers, params=params)
+        updateProfileImageResponse = await self.session.post(
+            url, headers=headers, params=params
+        )
         return updateProfileImageResponse
 
     async def asyncUpdateProfileBanner(self, media: str) -> Response:
@@ -444,13 +483,17 @@ class AsyncAccount:
         url = f"{self.v1_api}/account/update_profile_banner.json"
         headers = get_headers(self.session)
         params = {"media_id": media_id}
-        updateProfileBannerResponse = await self.session.post(url, headers=headers, params=params)
+        updateProfileBannerResponse = await self.session.post(
+            url, headers=headers, params=params
+        )
         return updateProfileBannerResponse
 
     async def asyncUpdateProfileInfo(self, **kwargs) -> Response:
         url = f"{self.v1_api}/account/update_profile.json"
         headers = get_headers(self.session)
-        updateProfileInfoResponse = await self.session.post(url, headers=headers, params=kwargs)
+        updateProfileInfoResponse = await self.session.post(
+            url, headers=headers, params=kwargs
+        )
         return updateProfileInfoResponse
 
     async def asyncUpdateSearchSettings(self, settings: dict) -> Response:
@@ -475,7 +518,9 @@ class AsyncAccount:
         headers = get_headers(self.session)
         headers["content-type"] = "application/x-www-form-urlencoded"
         url = "https://twitter.com/i/api/i/account/change_password.json"
-        changePasswordResponse = await self.session.post(url, headers=headers, data=urlencode(params))
+        changePasswordResponse = await self.session.post(
+            url, headers=headers, data=urlencode(params)
+        )
         return changePasswordResponse.json()
 
     async def asyncRemoveInterests(self, *args):
@@ -673,7 +718,7 @@ class AsyncAccount:
                     pbar.update(fp.tell() - pbar.n)
 
         params = {"command": "FINALIZE", "media_id": media_id, "allow_async": "true"}
-        
+
         if is_dm:
             params |= {"original_md5": hashlib.md5(file.read_bytes()).hexdigest()}
         uploadMediaResponse = await self.session.post(
@@ -713,12 +758,12 @@ class AsyncAccount:
             print(f"Status Response Status: {uploadMediaResponse.status_code}")
             processing_info = uploadMediaResponse.json().get("processing_info")
         # self.logger.debug
-        
+
         return uploadMediaResponse.json().get("media_id_string")
 
     @staticmethod
     async def _async_validate_session(email, username, password, session, **kwargs):
-        #print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
+        # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
         # invalid credentials and session
         cookies = kwargs.get("cookies")
@@ -734,7 +779,7 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            #print("Logging with cookies Dict 100%")
+            # print("Logging with cookies Dict 100%")
             return _session
 
         # try validating cookies from file
@@ -746,21 +791,20 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            #print("Logging with cookies File 100%")
+            # print("Logging with cookies File 100%")
             return _session
 
         # validate credentials
         if all((email, username, password)):
             session = await asyncLogin(email, username, password, **kwargs)
             session._init_with_cookies = False
-            #print("Logging with user pass 100%")
+            # print("Logging with user pass 100%")
             return session
 
         # invalid credentials, try validating session
         if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
             session._init_with_cookies = True
             return session
-
 
         raise Exception(
             "Session not authenticated. "
@@ -770,7 +814,9 @@ class AsyncAccount:
     async def _async_add_alt_text(self, media_id: int, text: str) -> Response:
         params = {"media_id": media_id, "alt_text": {"text": text}}
         url = f"{self.v1_api}/media/metadata/create.json"
-        addAltTextResponse = await self.session.post(url, headers=get_headers(self.session), json=params)
+        addAltTextResponse = await self.session.post(
+            url, headers=get_headers(self.session), json=params
+        )
         return addAltTextResponse
 
     def _init_logger(self, **kwargs) -> Logger:
@@ -789,20 +835,22 @@ class AsyncAccount:
             return logging.getLogger(logger_name)
 
     def id(self) -> int:
-        """ Get User ID """
+        """Get User ID"""
         if not self.twid:
             potentialTwid = self.session.cookies.get("twid")
-            
+
             if not potentialTwid:
                 raise Exception("Session is missing twid cookie")
-            
+
             self.twid = int(potentialTwid.split("=")[-1].strip().rstrip())
-            
+
         return self.twid
 
     def save_cookies(self, fname: str = None, toFile=True):
-        """ Save cookies to file """
+        """Save cookies to file"""
         cookies = self.session.cookies
         if toFile:
-            Path(f'{fname or cookies.get("username")}.cookies').write_bytes(orjson.dumps(dict(cookies)))
+            Path(f'{fname or cookies.get("username")}.cookies').write_bytes(
+                orjson.dumps(dict(cookies))
+            )
         return dict(cookies)

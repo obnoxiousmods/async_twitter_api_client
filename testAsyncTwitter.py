@@ -1,6 +1,8 @@
+import secrets
+import anyio
+
 from asyncTwitter.asyncAccount import AsyncAccount
 from asyncTwitter.asyncSearch import AsyncSearch
-from anyio import run
 
 
 async def testSearch():
@@ -13,8 +15,8 @@ async def testSearch():
         limit=100,
         out="data/search_results",
     )
-    results = results [0]
-    print(f'Found {len(results)}')
+    results = results[0]
+    print(f"Found {len(results)}")
 
 
 async def testAccount():
@@ -29,14 +31,20 @@ async def testAccount():
         cookies="C:/Users/a/Documents/Git/infiniteMoneyTwitterBot/cookies/obJellyfin.cookies"
     )
 
-    # results = await twitter.asyncTweet(text="A test tweet from the asyncTwitter module!")
-    scheduleTweetResults = await twitter.asyncScheduleTweet(
-        text="A test tweet from the asyncTwitter module!",
-        date="2021-08-01 08:21",
+    results = await twitter.asyncQuote(
+        text=f"{secrets.token_hex(8)} Testing Images", media=[{"media": "images/c6de96febe59e38b2927c18f4148b70e995d2c9698829e16e7f7545f231470fd.png"}],
+        tweet_id="1783324533858128204"
     )
 
-    print(scheduleTweetResults)
+    # results = await twitter.asyncTweet(text="A test tweet from the asyncTwitter module!")
+    # scheduleTweetResults = await twitter.asyncScheduleTweet(
+    #    text="A test tweet from the asyncTwitter module!",
+    #    date="2021-08-01 08:21",
+    # )
+
+    # print(scheduleTweetResults)
 
 
 if __name__ == "__main__":
-    run(testSearch)
+    # run(testSearch)
+    anyio.run(testAccount)
