@@ -26,7 +26,7 @@ from .constants import (
 from .util import get_headers, log, urlencode, find_key, RED, RESET, Path, get_cursor
 from uuid import uuid1, getnode
 from string import ascii_letters
-
+from twoCaptcha import TwoCaptcha
 
 from .asyncLogin import asyncLogin
 
@@ -45,8 +45,107 @@ class AsyncAccount:
         self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
+        self.twoCaptcha = TwoCaptcha(
+            main=self, apiKey="9f5eaaf194011a395fed53f579a85c57"
+        )
 
         # print(f'AsyncAcc Logger: {self.logger}')
+
+    async def unlockViaArkoseCaptcha(self):
+        """
+        This method is used to unlock the account via Arkose Captcha.
+        """
+
+        unlockHeaders = {
+            # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-CA,en-US;q=0.7,en;q=0.3",
+            "DNT": "1",
+            "Sec-GPC": "1",
+            "Connection": "keep-alive",
+            "Referer": "https://twitter.com/",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin",
+            "Priority": "u=1",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+        }
+
+        # new client because it wouldnt work on the self.session idk why
+        newClient = AsyncClient(
+            headers=unlockHeaders,
+            cookies=self.session.cookies,
+            proxies=self.proxies,
+            verify=False,
+            timeout=30,
+            http2=True,
+        )
+        endpointUrl = "https://twitter.com/account/access"
+        params = {"lang": "en"}
+
+        getRespForData = await newClient.get(endpointUrl, params=params)
+
+        authenticityToken = getRespForData.text.split(
+            '<input type="hidden" name="authenticity_token" value="'
+        )[1].split('"')[0]
+        assignmentToken = getRespForData.text.split(
+            '<input type="hidden" name="assignment_token" value="'
+        )[1].split('"')[0]
+
+        if self.debug:
+            self.logger.debug(
+                f"Authenticity Token Found, getting solved Captcha...: {authenticityToken}"
+            )
+
+        submitCaptchaTask = await self.twoCaptcha.createTask(
+            websiteUrl="https://twitter.com/account/access",
+            websiteKey="0152B4EB-D2DC-460A-89A1-629838B529C9",
+        )
+
+        captchaTaskId = submitCaptchaTask.get("taskId")
+
+        if self.debug:
+            self.logger.debug(f"Captcha Task ID: {captchaTaskId}")
+
+        captchaResults = await self.twoCaptcha.checkTaskUntilFinished(
+            captchaTaskId, sleepTime=15, maxRetries=20
+        )
+
+        if self.debug:
+            self.logger.debug(f"Captcha Results: {captchaResults}")
+
+        solutionToken = captchaResults.get("solution", {}).get("token")
+        
+        if not solutionToken:
+            if self.debug:
+                self.logger.debug("Failed to solve Captcha.")
+                return {"success": False, "error": "Failed to solve Captcha."}
+
+        payload = {
+            "authenticity_token": authenticityToken,
+            "assignment_token": assignmentToken,
+            "lang": "en",
+            "flow": "",
+            "verification_string": solutionToken,  # Captcha solve
+            "language_code": "en",
+        }
+
+        unlockResponse = await newClient.post(
+            endpointUrl, params=params, data=payload, headers=unlockHeaders
+        )
+        
+        if 'Your account is now available for use.' in unlockResponse.text:
+            unlocked = True
+        else:
+            unlocked = False
+
+        if self.debug:
+            self.logger.debug(f"Unlocked: {unlocked}")
+            print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
+
+        return unlockResponse
 
     async def asyncAuthenticate(
         self,
@@ -776,6 +875,9 @@ class AsyncAccount:
                 cookies=cookies,
                 follow_redirects=True,
                 proxies=kwargs.pop("proxies", None),
+                http2=True,
+                verify=False,
+                timeout=30,
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
@@ -788,6 +890,9 @@ class AsyncAccount:
                 cookies=orjson.loads(Path(cookies).read_bytes()),
                 follow_redirects=True,
                 proxies=kwargs.pop("proxies", None),
+                http2=True,
+                verify=False,
+                timeout=30,
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))

@@ -9,6 +9,8 @@ All I have done is changed the client to asyncClient
 
 # Key Differences
 
+```
+supports unlocking account via account.unlockViaArkoseCaptcha()
 linted by ruff
 renames tweet and other functions to asyncTweet asyncReply etc
 all functions must be awaited
@@ -17,10 +19,11 @@ natively supports proxies, http(s)+socks5
 reply & quote support uploading images
 
 Original search.py uses asyncio.gather(), i switched to use anyio.create_task_group() with a results list that the tasks append to, might not be a 1:1 behaviour
+```
 
 # Todo
 ```
-Solve & Submit captcha to unlock account using various captcha solving providers
+Add more captchas providers to solve arkose challenge
 Maybe fix searching somehwat?
 Add signup
 ```

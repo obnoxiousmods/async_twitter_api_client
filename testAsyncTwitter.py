@@ -20,7 +20,7 @@ async def testSearch():
 
 
 async def testAccount():
-    twitter = AsyncAccount()
+    twitter = AsyncAccount(debug=True)
 
     # cookies = {
     #    "ct0": "b6e7f4a7c7b0f8d3b6e7f4a7c7b0f8d329t3i4320t9u432t902t430932ty4902u3t923tu329tu32t9u",
@@ -30,11 +30,12 @@ async def testAccount():
     await twitter.asyncAuthenticate(
         cookies="C:/Users/a/Documents/Git/infiniteMoneyTwitterBot/cookies/obJellyfin.cookies"
     )
+    
+    results1 = await twitter.asyncTweet(text=f"A test tweet from the asyncTwitter module! {secrets.token_hex(16)}")
 
-    results = await twitter.asyncQuote(
-        text=f"{secrets.token_hex(8)} Testing Images", media=[{"media": "images/c6de96febe59e38b2927c18f4148b70e995d2c9698829e16e7f7545f231470fd.png"}],
-        tweet_id="1783324533858128204"
-    )
+    results = await twitter.unlockViaArkoseCaptcha()
+    
+    print(results.text)
 
     # results = await twitter.asyncTweet(text="A test tweet from the asyncTwitter module!")
     # scheduleTweetResults = await twitter.asyncScheduleTweet(

@@ -247,6 +247,9 @@ async def asyncLogin(email: str, username: str, password: str, **kwargs) -> Asyn
         },
         follow_redirects=True,
         proxies=proxies,
+        http2=True,
+        timeout=30,
+        verify=False
     )
 
     client = await asyncExecuteLoginFlow(client, **kwargs)
