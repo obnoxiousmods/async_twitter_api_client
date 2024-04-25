@@ -21,24 +21,20 @@ Add signup
 
 Original search.py uses asyncio.gather(), i switched to use anyio.create_task_group() with a results list that the tasks append to, might not be a 1:1 behaviour
 
+```pip install asyncTwitterClient```
+
 ```
-from asyncTwitter.asyncAccount import asyncAccount
-from trio import run
+import anyio
+
+from asyncTwitter.asyncAccount import AsyncAccount
 
 
-async def mainFunc():
-    twitter = asyncAccount()
-
-    initResults = await twitter.asyncAuthenticate(
-        cookies="cookies/obJellyfin.cookies",
-        #email="lol@gmail.com"
-        #password="eweigjwhj32!"
-        #proxies="socks5://127.0.0.1:9150"
+async def main():
+    twitter = AsyncAccount()
+    await twitter.asyncAuthenticate(
+        cookies={"ct0": "fuefjwegf89ewg9uiwg9", "auth_token": "je09giewg9iwg9j"}
     )
-    print(initResults)
 
-    await twitter.asyncTweet(text="Async tweet testing 123")
-
-
-run(mainFunc)
+if __name__ == "__main__":
+    anyio.run(main)
 ```

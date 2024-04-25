@@ -16,7 +16,7 @@ setup(
     description='A async port of twitter-api-client with extra features',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/yourusername/asyncTwitterClient',
+    url='https://github.com/obnoxiousish/async_twitter_api_client',
     packages=find_packages(),
     install_requires=requirements,
     classifiers=[
