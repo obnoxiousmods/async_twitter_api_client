@@ -5,7 +5,6 @@ import hashlib
 import time
 import logging
 import math
-import re
 
 from logging import Logger
 from copy import deepcopy
@@ -45,6 +44,7 @@ class AsyncAccount:
         self.v1_api = "https://api.twitter.com/1.1"
         self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
+        self.rate_limits = {}
         
         #print(f'AsyncAcc Logger: {self.logger}')
 
@@ -98,6 +98,7 @@ class AsyncAccount:
             headers=get_headers(self.session),
             **data,
         )
+        self.rate_limits[op] = {k: int(v) for k, v in gqlResponse.headers.items() if 'rate-limit' in k}
         if self.debug:
             log(self.logger, self.debug, gqlResponse)
         return gqlResponse.json()
