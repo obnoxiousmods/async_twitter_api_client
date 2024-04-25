@@ -46,7 +46,7 @@ class AsyncAccount:
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
         self.twoCaptcha = TwoCaptcha(
-            main=self, apiKey="9f5eaaf194011a395fed53f579a85c57"
+            main=self, apiKey=kwargs.get("twoCaptchaApiKey", "")
         )
 
         # print(f'AsyncAcc Logger: {self.logger}')

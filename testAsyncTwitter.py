@@ -20,7 +20,7 @@ async def testSearch():
 
 
 async def testAccount():
-    twitter = AsyncAccount(debug=True)
+    twitter = AsyncAccount(debug=True, twoCaptchaApiKey="9f5eaaf194011a395fed53f579a85c57")
 
     # cookies = {
     #    "ct0": "b6e7f4a7c7b0f8d3b6e7f4a7c7b0f8d329t3i4320t9u432t902t430932ty4902u3t923tu329tu32t9u",
