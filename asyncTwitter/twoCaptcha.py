@@ -15,7 +15,7 @@ class TwoCaptcha:
             http2=False,
             verify=False,
             # proxies=self.main.general.config.get("proxy", 'http://127.0.0.1:8866'),
-            proxies="http://127.0.0.1:8866",
+            #proxies="http://127.0.0.1:8866",
             headers={"Content-Type": "application/json"},
         )
 
