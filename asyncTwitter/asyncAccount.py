@@ -952,18 +952,20 @@ class AsyncAccount:
 
     def _init_logger(self, **kwargs) -> Logger:
         if self.debug:
-            cfg = kwargs.get("log_config")
-            logging.config.dictConfig(cfg or LOG_CONFIG)
+            #cfg = kwargs.get("log_config")
+            #logging.config.dictConfig(cfg or LOG_CONFIG)
 
             # only support one logger
-            logger_name = list(LOG_CONFIG["loggers"].keys())[0]
+            #logger_name = list(LOG_CONFIG["loggers"].keys())[0]
 
             # set level of all other loggers to ERROR
-            for name in logging.root.manager.loggerDict:
-                if name != logger_name:
-                    logging.getLogger(name).setLevel(logging.ERROR)
+            #for name in logging.root.manager.loggerDict:
+            #    if name != logger_name:
+            #        logging.getLogger(name).setLevel(logging.ERROR)
 
-            return logging.getLogger(logger_name)
+            #return logging.getLogger(logger_name)
+            return logging.getLogger("twitter")
+
 
     def id(self) -> int:
         """Get User ID"""
