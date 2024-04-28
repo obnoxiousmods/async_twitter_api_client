@@ -36,7 +36,10 @@ from .util import (
 )
 from uuid import uuid1, getnode
 from string import ascii_letters
-from asyncTwitter.twoCaptcha import TwoCaptcha
+try:
+    from asyncTwitter.twoCaptcha import TwoCaptcha
+except Exception:
+    from ..asyncTwitter.twoCaptcha import TwoCaptcha
 
 from .asyncLogin import asyncLogin
 from httpx_socks import AsyncProxyTransport
