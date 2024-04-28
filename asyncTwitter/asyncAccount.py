@@ -154,11 +154,17 @@ class AsyncAccount:
                 "proxyPort": parsedProxy.port,
                 "proxyLogin": parsedProxy.username,
                 "proxyPassword": parsedProxy.password,
-                "userAgent": self.session.headers.get("User-Agent"),
+                "userAgent": dict(self.session.headers).get(
+                    "user-agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.3",
+                ),
             }
         else:
             kwargs = {
-                "userAgent": self.session.headers.get("User-Agent"),
+                "userAgent": dict(self.session.headers).get(
+                    "user-agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.3",
+                ),
             }
 
         submitCaptchaTask = await self.twoCaptcha.createTask(
