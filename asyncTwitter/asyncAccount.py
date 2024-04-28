@@ -1094,8 +1094,7 @@ class AsyncAccount:
             def critical(self, *args):
                 print(f"{RED}[!] CRITICAL: {args}{RESET}")
                 
-        if self.debug:
-            self.logger = logger()
+        self.logger = logger()
 
     def id(self) -> int:
         """Get User ID"""
