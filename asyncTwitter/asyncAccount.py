@@ -88,6 +88,7 @@ class AsyncAccount:
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
         self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
+        self.proxyString = proxies
 
         if httpxSocks:
             self.proxies = {
@@ -300,6 +301,8 @@ class AsyncAccount:
         self.twitterId = False
         self.twitterRestId = False
         self.cookies = cookies
+        
+        self.proxyString = proxies
 
         if httpxSocks:
             self.proxies = {
