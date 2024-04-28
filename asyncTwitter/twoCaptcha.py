@@ -76,24 +76,14 @@ class TwoCaptcha:
         websiteUrl: str,
         websiteKey: str,
         method="FunCaptchaTaskProxyless",
-        isInvisible: bool = False,
-        isEnterprise: bool = False,
         cookies: dict = None,
+        **kwargs,
     ):
         taskObject = {
             "type": method,
             "websiteURL": websiteUrl,
             "websitePublicKey": websiteKey,
-            #"isInvisible": isInvisible,
-            #"isEnterprise": isEnterprise,
-            #"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
-            #"apiDomain": "recaptcha.net",
-            #"proxyType": 'socks5',
-            #"proxyAddress": "212.83.142.158",
-            #"proxyPort": "10554",
-            #"pageAction": "login"
-            #"proxyLogin": "user-default_geo-ca_session-RuWtjl6c",
-            #"proxyPassword": "O4A2GhpNjgOw",
+            **kwargs
         }
 
         def convert_cookies_to_string(cookie_dict):

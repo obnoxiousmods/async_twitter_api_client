@@ -17,6 +17,7 @@ all functions must be awaited
 uses httpx asyncclient instead of Client so it supports anyio, trio, curio, asyncio
 natively supports proxies, http(s)+socks5
 reply & quote support uploading images
+save_cookies takes toFile arg instead of always making a file and rets a dict
 
 Original search.py uses asyncio.gather(), i switched to use anyio.create_task_group() with a results list that the tasks append to, might not be a 1:1 behaviour
 ```
@@ -24,6 +25,8 @@ Original search.py uses asyncio.gather(), i switched to use anyio.create_task_gr
 # Todo
 ```
 Add more captchas providers to solve arkose challenge
+Find a way to provide real ui_metrics for unlocker
+Find a way to use original AsyncClient for unlocker
 Maybe fix searching somehwat?
 Add signup
 ```

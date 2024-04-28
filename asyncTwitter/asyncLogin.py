@@ -254,5 +254,5 @@ async def asyncLogin(email: str, username: str, password: str, **kwargs) -> Asyn
 
     client = await asyncExecuteLoginFlow(client, **kwargs)
     if not client or client.cookies.get("flow_errors") == "true":
-        raise Exception(f"[{RED}error{RESET}] {BOLD}{username}{RESET} login failed")
+        raise Exception(f"[error] {username} login failed")
     return client

@@ -23,65 +23,98 @@ from .constants import (
     follow_settings,
     follower_notification_settings,
 )
-from .util import get_headers, log, urlencode, find_key, RED, RESET, Path, get_cursor, GREEN
+from .util import (
+    get_headers,
+    log,
+    urlencode,
+    find_key,
+    RED,
+    RESET,
+    Path,
+    get_cursor,
+    GREEN,
+)
 from uuid import uuid1, getnode
 from string import ascii_letters
 from asyncTwitter.twoCaptcha import TwoCaptcha
 
 from .asyncLogin import asyncLogin
+from httpx_socks import AsyncProxyTransport
+from urllib import parse
 
 
 class AsyncAccount:
     def __init__(
         self,
-        *args,
+        save: bool = True,
+        debug: bool = False,
+        twid: bool = False,
+        twoCaptchaApiKey: str = None,
+        proxies: str = None,
+        httpxSocks: bool = False,
         **kwargs,
     ):
-        self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", False)
-        self.twid = kwargs.get("twid", False)
+        """Initailize the AsyncAccount class.
+
+        Args:
+            save (bool, optional): Enable or disable saving files. Defaults to True.
+            debug (bool, optional): Enable or disable debug logging. Defaults to False.
+            twid (bool, optional): Provide the accounts Rest_Id. Defaults to False.
+            twoCaptchaApiKey (str, optional): Provide a TwoCaptcha API key. Defaults to None.
+
+            Do not confuse save with save_cookies. Save is used to save files like images and videos.
+
+            twoCaptchaAPIKey is used to solve captchas for unlocking the account.
+
+            **kwargs: Additional arguments to pass to the logger.
+        """
+        self.save = save
+        self.debug = debug
+        self.twid = twid
         self.gql_api = "https://twitter.com/i/api/graphql"
         self.v1_api = "https://api.twitter.com/1.1"
         self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
-        self.twoCaptcha = TwoCaptcha(
-            main=self, apiKey=kwargs.get("twoCaptchaApiKey", "")
-        )
+        self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
+
+        if httpxSocks:
+            self.transport = AsyncProxyTransport.from_url(proxies)
+            self.proxies = None
+            self.proxyString = proxies
+        else:
+            self.proxies = proxies
+            self.transport = None
+            self.proxyString = proxies
 
         # print(f'AsyncAcc Logger: {self.logger}')
 
     async def unlockViaArkoseCaptcha(self) -> dict:
         """
         This method is used to unlock the account via Arkose Captcha.
+        Provide the TwoCaptcha API key in the constructor/__init__ to use this method.
+
+        This function really needs someone to find a way to find real ui_metrics values.
+        Theyre just static currently, could be getting accounts banned.
+
+        Also needs a way to use the authenticated session instead of copying it,
+        not sure why it wont just werk for me.
         """
 
-        unlockHeaders = {
-            # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-CA,en-US;q=0.7,en;q=0.3",
-            "DNT": "1",
-            "Sec-GPC": "1",
-            "Connection": "keep-alive",
-            "Referer": "https://twitter.com/",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            "Priority": "u=1",
-            "Pragma": "no-cache",
-            "Cache-Control": "no-cache",
-        }
-
-        # new client because it wouldnt work on the self.session idk why
+        copyOfHeaders = dict(self.session.headers.copy())
+        copyOfHeaders.pop("authorization", None)
+        # Authorization is removed cuz it causes a 403? Not sure why...
+        
         newClient = AsyncClient(
-            headers=unlockHeaders,
-            cookies=self.session.cookies,
+            headers=copyOfHeaders,
+            cookies=dict(self.session.cookies),
+            transport=self.transport,
             proxies=self.proxies,
             verify=False,
             timeout=30,
             http2=True,
         )
+        
         endpointUrl = "https://twitter.com/account/access"
         params = {"lang": "en"}
 
@@ -99,9 +132,21 @@ class AsyncAccount:
                 f"Authenticity Token Found, getting solved Captcha...: {authenticityToken}"
             )
 
+        parsedProxy = parse.urlparse(self.proxyString)
+
+        kwargs = {
+            'proxyType': parsedProxy.scheme,
+            'proxyAddress': parsedProxy.hostname,
+            'proxyPort': parsedProxy.port,
+            'proxyLogin': parsedProxy.username,
+            'proxyPassword': parsedProxy.password,
+            'userAgent': self.session.headers.get("User-Agent"),
+        }
+
         submitCaptchaTask = await self.twoCaptcha.createTask(
             websiteUrl="https://twitter.com/account/access",
             websiteKey="0152B4EB-D2DC-460A-89A1-629838B529C9",
+            **kwargs
         )
 
         captchaTaskId = submitCaptchaTask.get("taskId")
@@ -117,7 +162,7 @@ class AsyncAccount:
             self.logger.debug(f"Captcha Results: {captchaResults}")
 
         solutionToken = captchaResults.get("solution", {}).get("token")
-        
+
         if not solutionToken:
             if self.debug:
                 self.logger.debug("Failed to solve Captcha.")
@@ -133,17 +178,17 @@ class AsyncAccount:
         }
 
         unlockResponse = await newClient.post(
-            endpointUrl, params=params, data=payload, headers=unlockHeaders
+            endpointUrl, params=params, data=payload, headers={"Referer": endpointUrl}
         )
-        
-        if 'Your account is now available for use.' in unlockResponse.text:
+
+        if "Your account is now available for use." in unlockResponse.text:
             unlocked = True
         else:
             unlocked = False
 
         if self.debug:
             self.logger.debug(f"Captcha Unlock: {unlocked} | Checking final stage...")
-            print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
+            #print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
 
         if unlocked:
             authenticityToken = unlockResponse.text.split(
@@ -153,14 +198,24 @@ class AsyncAccount:
                 '<input type="hidden" name="assignment_token" value="'
             )[1].split('"')[0]
             finishPayload = {
-                'authenticity_token': authenticityToken,
-                'assignment_token': assignmentToken,
-                'lang': 'en',
-                'flow': '',
-                'ui_metrics': '{"rf":{"a164b41fad0433b3eb8ef1474015a1c192606f211d5cab98860739135a6f57d2":-111,"a846abda2338f92a076af6e5f40e8171ddfa1f5f802abc62f1fb39cfd0138301":-1,"ace36e17c04cb2475c443874a57310e469013dbecf948d84137d12b6ad71e025":0,"a25211b004a8e34850978eeb17bab27bca8653a820c1c58442766f317ce2f965":-128},"s":"s0TtDv7i3G_2y2Dx1m-IOiI6st_0zRgRrfYDgKHX7jpHDp0q0bm2Bj7youdKVhxivyJTOpD0t6QrhVGbeUwN3rGreAE2p06HTYtVT_iWDmwdHTmbrOoFM4ws3pNLHb7AGB6ceguzlW8J51qGwY1DrCLFxMFm3_rQ6T0Cu7gp1CsVutURjyEdzecozhS57mEaryVBaxImglAON7SbByk-cOj5FMki6pH3SxFvaOaA3A1Y7CiOU7pQ07KdFhCUcyfM1xkWY3kdH9-lw9sOPBaTrjX15d0L6RTnEcsqtINE8NNZJ5QFaXLNbrlEtSGW29ugUlZphX5Z24iM1-Zn6g6uBgAAAY8W4QwM"}',
+                "authenticity_token": authenticityToken,
+                "assignment_token": assignmentToken,
+                "lang": "en",
+                "flow": "",
+                "ui_metrics": { # What the fuck is this? Thinking of just making it random
+                    "rf": {
+                        "a164b41fad0433b3eb8ef1474015a1c192606f211d5cab98860739135a6f57d2": -111,
+                        "a846abda2338f92a076af6e5f40e8171ddfa1f5f802abc62f1fb39cfd0138301": -1,
+                        "ace36e17c04cb2475c443874a57310e469013dbecf948d84137d12b6ad71e025": 0,
+                        "a25211b004a8e34850978eeb17bab27bca8653a820c1c58442766f317ce2f965": -128,
+                    },
+                    "s": "s0TtDv7i3G_2y2Dx1m-IOiI6st_0zRgRrfYDgKHX7jpHDp0q0bm2Bj7youdKVhxivyJTOpD0t6QrhVGbeUwN3rGreAE2p06HTYtVT_iWDmwdHTmbrOoFM4ws3pNLHb7AGB6ceguzlW8J51qGwY1DrCLFxMFm3_rQ6T0Cu7gp1CsVutURjyEdzecozhS57mEaryVBaxImglAON7SbByk-cOj5FMki6pH3SxFvaOaA3A1Y7CiOU7pQ07KdFhCUcyfM1xkWY3kdH9-lw9sOPBaTrjX15d0L6RTnEcsqtINE8NNZJ5QFaXLNbrlEtSGW29ugUlZphX5Z24iM1-Zn6g6uBgAAAY8W4QwM",
+                },
             }
-            finishUnlockResp = await newClient.post(endpointUrl, data=finishPayload, follow_redirects=True)
-            
+            finishUnlockResp = await newClient.post(
+                endpointUrl, data=finishPayload, follow_redirects=True
+            )
+
             if str(finishUnlockResp.url) == "https://twitter.com/?lang=en":
                 unlocked = True
                 if self.debug:
@@ -169,7 +224,6 @@ class AsyncAccount:
                 unlocked = False
                 if self.debug:
                     self.logger.debug(f"{RED}Failed to unlock account.{RESET}")
-                    
 
         return {"success": unlocked}
 
@@ -179,12 +233,28 @@ class AsyncAccount:
         username: str = None,
         password: str = None,
         session: AsyncClient = None,
+        proxies: str = None,
+        httpxSocks: bool = False,
+        cookies: dict = None,
         **kwargs,
-    ):
+    ) -> AsyncClient:
         """
         This is used to authenticate the account.
 
-        This used to be in __init__ but we can't await in __init__ so we have to do it here.
+        If email:username:pass is provided will attempt to login
+        If cookies ct0&auth_token are provided will attempt to validate the session using cookies.
+
+        Args:
+            email (str): Email of the account.
+            username (str): Username of the account.
+            password (str): Password of the account.
+            session (AsyncClient): Session to use.
+            proxies (str): Proxies to use.
+            cookies (dict): Cookies to use.
+            **kwargs: Additional arguments to pass to the logger.
+
+        Returns:
+            AsyncClient: The session authenticated session
         """
 
         self.email = email
@@ -192,8 +262,16 @@ class AsyncAccount:
         self.password = password
         self.twitterId = False
         self.twitterRestId = False
-        self.cookies = kwargs.get("cookies")
-        self.proxies = kwargs.get("proxies")
+        self.cookies = cookies
+
+        if httpxSocks:
+            self.transport = AsyncProxyTransport.from_url(proxies)
+            self.proxies = None
+            self.proxyString = proxies
+        else:
+            self.proxies = proxies
+            self.transport = None
+            self.proxyString = proxies
 
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
 
@@ -952,20 +1030,19 @@ class AsyncAccount:
 
     def _init_logger(self, **kwargs) -> Logger:
         if self.debug:
-            #cfg = kwargs.get("log_config")
-            #logging.config.dictConfig(cfg or LOG_CONFIG)
+            # cfg = kwargs.get("log_config")
+            # logging.config.dictConfig(cfg or LOG_CONFIG)
 
             # only support one logger
-            #logger_name = list(LOG_CONFIG["loggers"].keys())[0]
+            # logger_name = list(LOG_CONFIG["loggers"].keys())[0]
 
             # set level of all other loggers to ERROR
-            #for name in logging.root.manager.loggerDict:
+            # for name in logging.root.manager.loggerDict:
             #    if name != logger_name:
             #        logging.getLogger(name).setLevel(logging.ERROR)
 
-            #return logging.getLogger(logger_name)
+            # return logging.getLogger(logger_name)
             return logging.getLogger("twitter")
-
 
     def id(self) -> int:
         """Get User ID"""

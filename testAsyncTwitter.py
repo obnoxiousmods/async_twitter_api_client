@@ -8,6 +8,7 @@ from asyncTwitter.asyncSearch import AsyncSearch
 
 config = json.load(open("config.json"))
 
+
 async def testSearch():
     search = AsyncSearch(debug=True)
     await search.asyncAuthenticate(
@@ -30,20 +31,26 @@ async def testAccount():
     #    "auth_token": "egfwiopjgew90pgj4w9gugh89u0f",
     # }
 
-    await twitter.asyncAuthenticate(
-        cookies="C:/Users/a/Documents/Git/infiniteMoneyTwitterBot/cookies/obJellyfin.cookies"
-    )
-    
+    if await twitter.asyncAuthenticate(
+        email="yetyetpretty_13@yahoo.com",
+        password="n9XWt74LJC",
+        username="YetyetFrancisco",
+        proxies="socks5://user-default_geo-ca_session-t5KwX72a:sD4XCY3hpkoP@resi.proxiware.com:8085",
+        cookies="cookies/testing.cookies",
+        httpxSocks=True,
+    ):
+        twitter.save_cookies(fname="cookies/testing.cookies", toFile=True)
+
     results1 = await twitter.asyncLike(tweet_id="1783497801906696316")
 
-    if 'this account is temporarily locked.' in str(results1):
-        print('Account is locked. Unlocking...')
+    if "this account is temporarily locked." in str(results1):
+        print("Account is locked. Unlocking...")
     else:
-        print('Account is not locked.')
+        print("Account is not locked.")
         exit()
 
     results = await twitter.unlockViaArkoseCaptcha()
-    
+
     print(results)
 
     # results = await twitter.asyncTweet(text="A test tweet from the asyncTwitter module!")
