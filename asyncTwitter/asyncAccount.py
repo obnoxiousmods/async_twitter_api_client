@@ -5,6 +5,7 @@ import hashlib
 import time
 import logging
 import math
+import sys
 
 from logging import Logger
 from copy import deepcopy
@@ -104,7 +105,7 @@ class AsyncAccount:
         copyOfHeaders = dict(self.session.headers.copy())
         copyOfHeaders.pop("authorization", None)
         # Authorization is removed cuz it causes a 403? Not sure why...
-        
+
         newClient = AsyncClient(
             headers=copyOfHeaders,
             cookies=dict(self.session.cookies),
@@ -114,7 +115,7 @@ class AsyncAccount:
             timeout=30,
             http2=True,
         )
-        
+
         endpointUrl = "https://twitter.com/account/access"
         params = {"lang": "en"}
 
@@ -128,25 +129,30 @@ class AsyncAccount:
         )[1].split('"')[0]
 
         if self.debug:
-            self.logger.debug(
+            self.logger.info(
                 f"Authenticity Token Found, getting solved Captcha...: {authenticityToken}"
             )
 
-        parsedProxy = parse.urlparse(self.proxyString)
+        if self.proxyString:
+            parsedProxy = parse.urlparse(self.proxyString)
 
-        kwargs = {
-            'proxyType': parsedProxy.scheme,
-            'proxyAddress': parsedProxy.hostname,
-            'proxyPort': parsedProxy.port,
-            'proxyLogin': parsedProxy.username,
-            'proxyPassword': parsedProxy.password,
-            'userAgent': self.session.headers.get("User-Agent"),
-        }
+            kwargs = {
+                "proxyType": parsedProxy.scheme,
+                "proxyAddress": parsedProxy.hostname,
+                "proxyPort": parsedProxy.port,
+                "proxyLogin": parsedProxy.username,
+                "proxyPassword": parsedProxy.password,
+                "userAgent": self.session.headers.get("User-Agent"),
+            }
+        else:
+            kwargs = {
+                "userAgent": self.session.headers.get("User-Agent"),
+            }
 
         submitCaptchaTask = await self.twoCaptcha.createTask(
             websiteUrl="https://twitter.com/account/access",
             websiteKey="0152B4EB-D2DC-460A-89A1-629838B529C9",
-            **kwargs
+            **kwargs,
         )
 
         captchaTaskId = submitCaptchaTask.get("taskId")
@@ -188,7 +194,7 @@ class AsyncAccount:
 
         if self.debug:
             self.logger.debug(f"Captcha Unlock: {unlocked} | Checking final stage...")
-            #print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
+            # print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
 
         if unlocked:
             authenticityToken = unlockResponse.text.split(
@@ -202,7 +208,7 @@ class AsyncAccount:
                 "assignment_token": assignmentToken,
                 "lang": "en",
                 "flow": "",
-                "ui_metrics": { # What the fuck is this? Thinking of just making it random
+                "ui_metrics": {  # What the fuck is this? Thinking of just making it random
                     "rf": {
                         "a164b41fad0433b3eb8ef1474015a1c192606f211d5cab98860739135a6f57d2": -111,
                         "a846abda2338f92a076af6e5f40e8171ddfa1f5f802abc62f1fb39cfd0138301": -1,
@@ -1030,19 +1036,20 @@ class AsyncAccount:
 
     def _init_logger(self, **kwargs) -> Logger:
         if self.debug:
-            # cfg = kwargs.get("log_config")
-            # logging.config.dictConfig(cfg or LOG_CONFIG)
+            self.logger = logging.getLogger("asyncTwitter")
+            self.logger.setLevel(logging.DEBUG)  # Set the logging level for this logger
 
-            # only support one logger
-            # logger_name = list(LOG_CONFIG["loggers"].keys())[0]
+            # Create a StreamHandler that sends log messages to stdout
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setLevel(logging.DEBUG)  # Set the logging level for this handler
 
-            # set level of all other loggers to ERROR
-            # for name in logging.root.manager.loggerDict:
-            #    if name != logger_name:
-            #        logging.getLogger(name).setLevel(logging.ERROR)
+            # Create a formatter and add it to the handler
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
 
-            # return logging.getLogger(logger_name)
-            return logging.getLogger("twitter")
+            # Add the handler to the logger
+            self.logger.addHandler(handler)
+            return self.logger
 
     def id(self) -> int:
         """Get User ID"""
