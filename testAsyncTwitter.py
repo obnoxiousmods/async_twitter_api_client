@@ -1,8 +1,8 @@
 import secrets
 import anyio
 import json
-
 from asyncTwitter.asyncAccount import AsyncAccount
+
 from asyncTwitter.asyncSearch import AsyncSearch
 
 
@@ -32,11 +32,11 @@ async def testAccount():
     # }
 
     if await twitter.asyncAuthenticate(
-        email="yetyetpretty_13@yahoo.com",
-        password="n9XWt74LJC",
-        username="YetyetFrancisco",
+        email="joseph_hernandez95@yahoo.com",
+        password="fMd5HcYEVKh9",
+        username="onecoolbrooo",
         proxies="socks5://user-default_geo-ca_session-t5KwX72a:sD4XCY3hpkoP@resi.proxiware.com:8085",
-        cookies="cookies/testing.cookies",
+        #cookies="cookies/testing.cookies",
         httpxSocks=True,
     ):
         twitter.save_cookies(fname="cookies/testing.cookies", toFile=True)

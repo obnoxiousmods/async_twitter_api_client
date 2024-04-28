@@ -104,6 +104,12 @@ class AsyncAccount:
 
         copyOfHeaders = dict(self.session.headers.copy())
         copyOfHeaders.pop("authorization", None)
+
+        copyOfHeaders["accept"] = (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+        )
+        copyOfHeaders["referer"] = "https://twitter.com/account/access"
+        copyOfHeaders["content-type"] = "application/x-www-form-urlencoded"
         # Authorization is removed cuz it causes a 403? Not sure why...
 
         newClient = AsyncClient(
@@ -115,6 +121,12 @@ class AsyncAccount:
             timeout=30,
             http2=True,
         )
+
+        if self.debug:
+            print(
+                dict(newClient.headers),
+                file=open("newClientHeaders.json", "w", encoding="utf-8"),
+            )
 
         endpointUrl = "https://twitter.com/account/access"
         params = {"lang": "en"}
@@ -164,10 +176,10 @@ class AsyncAccount:
             captchaTaskId, sleepTime=15, maxRetries=20
         )
 
-        if self.debug:
-            self.logger.debug(f"Captcha Results: {captchaResults}")
-
         solutionToken = captchaResults.get("solution", {}).get("token")
+
+        if self.debug:
+            self.logger.debug(f"Captcha Solution Token: {solutionToken}")
 
         if not solutionToken:
             if self.debug:
@@ -184,7 +196,7 @@ class AsyncAccount:
         }
 
         unlockResponse = await newClient.post(
-            endpointUrl, params=params, data=payload, headers={"Referer": endpointUrl}
+            endpointUrl, params=params, data=payload, follow_redirects=True
         )
 
         if "Your account is now available for use." in unlockResponse.text:
@@ -193,8 +205,10 @@ class AsyncAccount:
             unlocked = False
 
         if self.debug:
-            self.logger.debug(f"Captcha Unlock: {unlocked} | Checking final stage...")
-            # print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
+            self.logger.debug(
+                f"Captcha Unlock: {unlocked} | Unlock Response status_code: {unlockResponse.status_code}"
+            )
+            print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
 
         if unlocked:
             authenticityToken = unlockResponse.text.split(
@@ -222,7 +236,7 @@ class AsyncAccount:
                 endpointUrl, data=finishPayload, follow_redirects=True
             )
 
-            if str(finishUnlockResp.url) == "https://twitter.com/?lang=en":
+            if "https://twitter.com/?lang" in str(finishUnlockResp.url):
                 unlocked = True
                 if self.debug:
                     self.logger.debug(f"{GREEN}Account Unlocked Successfully!!!{RESET}")
@@ -1044,7 +1058,9 @@ class AsyncAccount:
             handler.setLevel(logging.DEBUG)  # Set the logging level for this handler
 
             # Create a formatter and add it to the handler
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
 
             # Add the handler to the logger

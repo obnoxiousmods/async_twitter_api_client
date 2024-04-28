@@ -32,7 +32,7 @@
                           <li class="js-logoutLink">
                             <button type="button">Log out</button>
                             <form class="js-logoutForm" action="/logout" method="post">
-                              <input type="hidden" value="5896486895701fcedd35d092243c742f04c3c302" name="authenticity_token">
+                              <input type="hidden" value="fc4be5521219765218ca1aac1e47511fa4cc4f77" name="authenticity_token">
                             </form>
                           </li>
                   </ul>
@@ -44,50 +44,24 @@
     </div>
   <div class="PageContainer">
         <div class="Section">
-        <noscript>
-    <div class="NoJsBanner">
-    You must enable JavaScript to continue. <a href>Click here</a> to reload the page.
+      
+          <div class="circle-loader-container">
+      <div class="circle-loader active"></div>
     </div>
-  </noscript>
-
-        <div class="PageHeader Edge">
-          Account unlocked.
-        </div>
-            <div class="UserHeader">
-  <img src="https://pbs.twimg.com/profile_images/378800000255425746/60c575629456e7b860a8b5d6f2b42405_normal.jpeg">
-  <div class="UserHeader-details">
-    <b dir="auto">u</b>
-    <br/>
-    <span class="UserHeader-name" dir="ltr">@Asdfnothing</span>
-  </div>
-</div>
-
-
-    <div class="TextGroup">
-      <div class="TextGroup-text">Thank you for addressing this issue. Your account is now available for use.</div>
-    </div>
-    <div class="TextGroup">
-      <div class="TextGroup-text">
-To prevent future lockouts or account suspension, please review the
-              <a href="https://support.twitter.com/articles/18311" target="_blank">X Rules</a> and help us maintain a
-              safe environment for everyone on X.      </div>
-    </div>
-
-    
-
-    <form action="/account/access?lang=en" method="post">
-  <input type="hidden" name="authenticity_token" value="5896486895701fcedd35d092243c742f04c3c302">
-<input type="hidden" name="assignment_token" value="-924214246">
+    <form id="arkose_form" action="/account/access?lang=en" method="post" class="Form" onsubmit="return false">
+      <input type="hidden" name="authenticity_token" value="fc4be5521219765218ca1aac1e47511fa4cc4f77">
+<input type="hidden" name="assignment_token" value="1851581426">
 <input type="hidden" name="lang" value="en">
 <input type="hidden" name="flow" value="">
-  <input type="hidden" name="ui_metrics" autocomplete="off">
-  <script src="/account/access?lang=en&amp;js=1"></script>
 <noscript>
   <input type="hidden" name="nsi" value="1">
 </noscript>
 
-  <input type="submit" disabled class="Button EdgeButton EdgeButton--primary" value="Continue to X">
-</form>
+      <input id="verification_string" name="verification_string" class="Form-textbox Edge-textbox is-required" type="textbox">
+      <input type="hidden" id="language_code" name="language_code" value="en"/>
+    </form>
+    <iframe id="arkose_iframe" src="https://iframe.arkoselabs.com/0152B4EB-D2DC-460A-89A1-629838B529C9/index.html?mkt=en&amp;data=fCIMH9ItWmFHEPDi.uivbvrfue7z41+Wb58pWXou5IXvcESdcpsnQq5MCuBYNathGKyWIH6EswcvcEhDF+axWuVe15sqESpEJsS+n/p5QPINwhYfcIotzbmkjt6xS0a87VvxvCJX3IThXBVOAGKk+U9BH5Qg+cyiyKLGCgARtZPKzBzwBmwvXzYkAKAtL3jiCCJhcpPiTb+qg6noZzjP6xk/0T8FhuWQHNfFZ9Ymnv9B0GUQiWV+mXVk19bE5WWdpyqS8ciiNwfvpcaWNggNoBFKhESlUMuzMkk3/wiqYHXnLlFNUFKdW9dyP79+e0/O1QvS9dVvpdVcgpjqWm5aUj30gzTt2bfqPd/e0c/Hq5XUVAEixwkCbLWG7jE6eyJ0MpfhUJPnzzHCv4mCPJ0f/MDEQ/+Oktog="></iframe>
+    <script nonce="eU8bxQ/pMrozGXDrY5xeRA==" src="./static/js/arkose.js" type="application/json"></script>
 
     </div>
 
