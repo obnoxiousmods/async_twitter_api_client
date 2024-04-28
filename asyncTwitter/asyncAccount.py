@@ -31,10 +31,8 @@ from .util import (
     Path,
     get_cursor,
     GREEN,
-    CYAN,
-    YELLOW,
-    
 )
+from colorama import Fore
 from uuid import uuid1, getnode
 from string import ascii_letters
 try:
@@ -1082,13 +1080,13 @@ class AsyncAccount:
     def _init_logger(self, **kwargs) -> Logger:
         class logger:
             def warning(self, *args):
-                print(f"{YELLOW}[-] WARNING: {args}{RESET}")
+                print(f"{Fore.YELLOW}[-] WARNING: {args}{RESET}")
             
             def info(self, *args):
                 print(f"{GREEN}[+] INFO: {args}{RESET}")
                 
             def debug(self, *args):
-                print(f"{CYAN}[+] DEBUG: {args}{RESET}")
+                print(f"{Fore.CYAN}[+] DEBUG: {args}{RESET}")
                 
             def error(self, *args):
                 print(f"{RED}[-] ERROR: {args}{RESET}")
