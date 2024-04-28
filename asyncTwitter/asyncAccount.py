@@ -20,7 +20,6 @@ from .constants import (
     UPLOAD_CHUNK_SIZE,
     MEDIA_UPLOAD_SUCCEED,
     MEDIA_UPLOAD_FAIL,
-    LOG_CONFIG,
     follow_settings,
     follower_notification_settings,
 )
@@ -45,6 +44,14 @@ from urllib import parse
 
 
 class AsyncAccount:
+    """The AsyncAccount class is used to interact with the Twitter API.
+    It contains account specific methods like tweeting, liking, following, etc.
+    
+    a = AsyncAccount(debug=True, twoCaptchaApiKey="2CaptchaKey")
+    await a.asyncAuthenticate(email="email", password="password", username="username", cookies="cookies.json", proxies="http://)
+    await a.asyncTweet("Hello World!")
+    """
+    
     def __init__(
         self,
         save: bool = True,

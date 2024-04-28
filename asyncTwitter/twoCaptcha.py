@@ -167,7 +167,7 @@ if __name__ == "__main__":
             isEnterprise=True,
         )
 
-        taskSuccess = task.get("success", False)
+        #taskSuccess = task.get("success", False)
         taskId = task.get("taskId", None)
 
         if taskId:

@@ -1,48 +1,151 @@
 import asyncio
 import logging.config
 import math
-
+import random
+import re
+import sys
+import time
 import aiofiles
+import orjson
 import websockets
-from httpx import AsyncClient, Limits, ReadTimeout, URL
-from tqdm.asyncio import tqdm_asyncio
 
-from .constants import *
-#from .login import login
+from logging import Logger
+from httpx import URL, AsyncClient, Limits, ReadTimeout, Response
+from httpx_socks import AsyncProxyTransport
+from tqdm.asyncio import tqdm_asyncio
 from .asyncLogin import asyncLogin
-from .util import *
+from .constants import (
+    Operation,
+    SpaceState,
+    trending_params,
+)
+from .util import (
+    BLUE,
+    CYAN,
+    GREEN,
+    MAGENTA,
+    RED,
+    RESET,
+    YELLOW,
+    Path,
+    batch_ids,
+    build_params,
+    find_key,
+    flatten,
+    get_cursor,
+    get_headers,
+    get_json,
+    init_session,
+    log,
+    save_json,
+    set_qs,
+    urlsplit,
+)
 
 
 class AsyncScraper:
+    """Twitter scraper class for async operations.
+
+    It performs actions like getting user data, tweets, followers, etc asynchronously.
+    """
+
     def __init__(
         self,
+        save: bool = True,
+        debug: bool = False,
+        pbar: bool = True,
+        out: str = "data",
+        proxies: str = None,
         makeFiles: bool = False,
+        httpxSocks: bool = False,
         **kwargs,
     ):
+        """Initialize the scraper.
+
+        Args:
+            save (bool, optional): Save data to disk. Defaults to True.
+            debug (bool, optional): Debug mode. Defaults to False.
+            pbar (bool, optional): Show progress bar. Defaults to True.
+            out (str, optional): Output directory. Defaults to "data".
+            makeFiles (bool, optional): Make files. Defaults to False.
+
+        Keyword Args:
+            max_connections (int, optional): Maximum connections. Defaults to 100.
+        """
         self.makeFiles = makeFiles
-        self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", False)
-        self.pbar = kwargs.get("pbar", True)
-        self.out = Path(kwargs.get("out", "data"))
+        self.save = save
+        self.debug = debug
+        self.pbar = pbar
+        self.out = Path(out)
         self.guest = False
         self.logger = self._init_logger(**kwargs)
         self.max_connections = kwargs.get("max_connections", 100)
-        
-        #print(f'Logger: {self.logger}')
-    
-    async def asyncAuthenticate(self, email:str=None, username:str=None, password:str=None, session=AsyncClient, **kwargs):
+
+        if httpxSocks:
+            self.transport = AsyncProxyTransport.from_url(proxies)
+            self.proxies = None
+            self.proxyString = proxies
+        else:
+            self.proxies = proxies
+            self.transport = None
+            self.proxyString = proxies
+
+
+        # print(f'Logger: {self.logger}')
+
+    async def asyncAuthenticate(
+        self,
+        email: str = None,
+        username: str = None,
+        password: str = None,
+        session: AsyncClient = None,
+        proxies: str = None,
+        httpxSocks: bool = False,
+        cookies: dict = None,
+        **kwargs,
+    ) -> AsyncClient:
+        """
+        This is used to authenticate the account.
+
+        If email:username:pass is provided will attempt to login
+        If cookies ct0&auth_token are provided will attempt to validate the session using cookies.
+
+        Args:
+            email (str): Email of the account.
+            username (str): Username of the account.
+            password (str): Password of the account.
+            session (AsyncClient): Session to use.
+            proxies (str): Proxies to use.
+            cookies (dict): Cookies to use.
+            **kwargs: Additional arguments to pass to the logger.
+
+        Returns:
+            AsyncClient: The session authenticated session
+        """
+
         self.email = email
         self.username = username
         self.password = password
-        self.cookies = kwargs.get("cookies", None)
-        self.proxies = kwargs.get("proxies", None)
-        
+        self.twitterId = False
+        self.twitterRestId = False
+        self.cookies = cookies
+
+        if httpxSocks:
+            self.transport = AsyncProxyTransport.from_url(proxies)
+            self.proxies = None
+            self.proxyString = proxies
+        else:
+            self.proxies = proxies
+            self.transport = None
+            self.proxyString = proxies
+
+        # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
+
         self.session = await self._async_validate_session(
-            email, username, password, session, **kwargs
+            self.email, self.username, self.password, session, **kwargs
         )
-        
+
         return self.session
-        
 
     async def asyncUsers(self, screen_names: list[str], **kwargs) -> list[dict]:
         """
@@ -291,7 +394,9 @@ class AsyncScraper:
 
         async def process():
             async with AsyncClient(
-                headers=self.session.headers, cookies=self.session.cookies, proxies=self.proxies
+                headers=self.session.headers,
+                cookies=self.session.cookies,
+                proxies=self.proxies,
             ) as client:
                 tasks = (download(client, x, y) for x, y in urls)
                 if self.pbar:
@@ -304,7 +409,7 @@ class AsyncScraper:
             try:
                 r = await client.get(cdn_url)
                 if self.makeFiles:
-                    #print('Making files!!')
+                    # print('Making files!!')
                     async with aiofiles.open(out / f"{name}_{ext}", "wb") as fp:
                         for chunk in r.iter_bytes(chunk_size=chunk_size):
                             await fp.write(chunk)
@@ -313,7 +418,7 @@ class AsyncScraper:
                     f"[{RED}error{RESET}] Failed to download media: {post_url} {e}"
                 )
 
-        #asyncio.run(process())
+        # asyncio.run(process())
         await process()
 
     async def asyncTrends(self, utc: list[str] = None) -> dict:
@@ -370,13 +475,17 @@ class AsyncScraper:
                     return await tqdm_asyncio.gather(*tasks, desc="Getting trends")
                 return await asyncio.gather(*tasks)
 
-        #trends = asyncio.run(process())
-        await process()
+        # trends = asyncio.run(process())
+        trends = await process()
         out = self.out / "raw" / "trends"
         out.mkdir(parents=True, exist_ok=True)
         (out / f"{time.time_ns()}.json").write_text(
             orjson.dumps(
-                {k: v for d in trends for k, v in d.items()},
+                {
+                    key: value
+                    for trendDict in trends
+                    for key, value in trendDict.items()
+                },
                 option=orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS,
             ).decode(),
             encoding="utf-8",
@@ -410,7 +519,9 @@ class AsyncScraper:
         else:
             res = await self._asyncrun(Operation.AudioSpaceSearch, search, **kwargs)
             search_results = set(find_key(res, "rest_id"))
-            spaces = await self._asyncrun(Operation.AudioSpaceById, search_results, **kwargs)
+            spaces = await self._asyncrun(
+                Operation.AudioSpaceById, search_results, **kwargs
+            )
         if audio or chat:
             return self._get_space_data(spaces, audio, chat)
         return spaces
@@ -436,7 +547,9 @@ class AsyncScraper:
             temp = []
             for stream in streams:
                 if stream.get("stream"):
-                    chunks = self._async_get_chunks(stream["stream"]["source"]["location"])
+                    chunks = self._async_get_chunks(
+                        stream["stream"]["source"]["location"]
+                    )
                     temp.append(
                         {
                             "rest_id": stream["space"]["data"]["audioSpace"][
@@ -537,7 +650,9 @@ class AsyncScraper:
 
         async def process():
             (self.out / "raw").mkdir(parents=True, exist_ok=True)
-            limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
+            limits = Limits(
+                max_connections=self.max_connections, max_keepalive_connections=10
+            )
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
@@ -551,7 +666,7 @@ class AsyncScraper:
                 return await asyncio.gather(*tasks)
 
         return await process()
-        #return asyncio.run(process())
+        # return asyncio.run(process())
 
     async def _async_download_audio(self, data: list[dict]) -> None:
         async def get(s: AsyncClient, chunk: str, rest_id: str) -> tuple:
@@ -559,7 +674,9 @@ class AsyncScraper:
             return rest_id, r
 
         async def process(data: list[dict]) -> list:
-            limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
+            limits = Limits(
+                max_connections=self.max_connections, max_keepalive_connections=10
+            )
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
@@ -572,7 +689,7 @@ class AsyncScraper:
                     return await tqdm_asyncio.gather(*tasks, desc="Downloading audio")
                 return await asyncio.gather(*tasks)
 
-        #chunks = asyncio.run(process(data))
+        # chunks = asyncio.run(process(data))
         chunks = await process(data)
         streams = {}
         [streams.setdefault(_id, []).append(chunk) for _id, chunk in chunks]
@@ -595,7 +712,9 @@ class AsyncScraper:
             return {"space": space, "stream": stream}
 
         async def process():
-            limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
+            limits = Limits(
+                max_connections=self.max_connections, max_keepalive_connections=10
+            )
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
@@ -603,7 +722,7 @@ class AsyncScraper:
             ) as c:
                 return await asyncio.gather(*(get(c, key) for key in keys))
 
-        #return asyncio.run(process())
+        # return asyncio.run(process())
         return await process()
 
     async def _asyncrun(
@@ -614,17 +733,21 @@ class AsyncScraper:
     ):
         keys, qid, name = operation
         # stay within rate-limits
-        if (l := len(queries)) > 500:
-            self.logger.warning(f"Got {l} queries, truncating to first 500.")
+        if (queriesLength := len(queries)) > 500:
+            self.logger.warning(
+                f"Got {queriesLength} queries, truncating to first 500."
+            )
             queries = list(queries)[:500]
 
         if all(isinstance(q, dict) for q in queries):
-            #data = asyncio.run(self._process(operation, list(queries), **kwargs))
+            # data = asyncio.run(self._process(operation, list(queries), **kwargs))
             data = await self._process(operation, list(queries), **kwargs)
             return get_json(data, **kwargs)
 
         # queries are of type set | list[int|str], need to convert to list[dict]
-        _queries = [{dictKey: query} for query in queries for dictKey, dictValue in keys.items()]
+        _queries = [
+            {dictKey: query} for query in queries for dictKey, dictValue in keys.items()
+        ]
 
         # res = asyncio.run(self._process(operation, _queries, **kwargs))
         res = await self._process(operation, _queries, **kwargs)
@@ -649,21 +772,26 @@ class AsyncScraper:
         return r
 
     async def _process(self, operation: tuple, queries: list[dict], **kwargs):
-        limits = Limits(max_connections=self.max_connections, max_keepalive_connections=10)
+        limits = Limits(
+            max_connections=self.max_connections, max_keepalive_connections=10
+        )
         headers = self.session.headers if self.guest else get_headers(self.session)
         cookies = self.session.cookies
         async with AsyncClient(
-            limits=limits, headers=headers, cookies=cookies, timeout=20, proxies=self.proxies
+            limits=limits,
+            headers=headers,
+            cookies=cookies,
+            timeout=20,
+            proxies=self.proxies,
         ) as c:
-            
             # Limit queries to 1
             queryLimit = kwargs.pop("queryLimit", False)
-            
+
             if queryLimit:
                 queries = queries[:queryLimit]
-                
+
             tasks = (self._paginate(c, operation, **q, **kwargs) for q in queries)
-            
+
             if self.pbar:
                 return await tqdm_asyncio.gather(*tasks, desc=operation[-1])
             return await asyncio.gather(*tasks)
@@ -682,7 +810,7 @@ class AsyncScraper:
             try:
                 r = await self._query(client, operation, **kwargs)
                 initial_data = r.json()
-                
+
                 res = [r]
                 # ids = get_ids(initial_data, operation) # todo
                 ids = set(find_key(initial_data, "rest_id"))
@@ -713,9 +841,9 @@ class AsyncScraper:
         return res
 
     async def _space_listener(self, chat: dict, frequency: int):
-        rand_color = lambda: random.choice(
-            [RED, GREEN, RESET, BLUE, CYAN, MAGENTA, YELLOW]
-        )
+        def rand_color():
+            return random.choice([RED, GREEN, RESET, BLUE, CYAN, MAGENTA, YELLOW])
+
         uri = f"wss://{URL(chat['endpoint']).host}/chatapi/v1/chatnow"
         with open("chatlog.jsonl", "ab") as fp:
             async with websockets.connect(uri) as ws:
@@ -790,7 +918,7 @@ class AsyncScraper:
                                     print(new_message, end=" ")
                                     prev_message = message
 
-    async def _get_live_chats(self, client: Client, spaces: list[dict]):
+    async def _get_live_chats(self, client: AsyncClient, spaces: list[dict]):
         async def get(c: AsyncClient, space: dict) -> list[dict]:
             media_key = space["data"]["audioSpace"]["metadata"]["media_key"]
             r = await c.get(
@@ -831,7 +959,7 @@ class AsyncScraper:
             await asyncio.gather(*(self._space_listener(c, frequency) for c in chats))
 
         spaces = self.asyncSpaces(rooms=[room])
-        #asyncio.run(get(spaces))
+        # asyncio.run(get(spaces))
         await get(spaces)
 
     async def asyncSpacesLive(self, rooms: list[str]):
@@ -843,9 +971,15 @@ class AsyncScraper:
         @param rooms: list of room ids
         @return: None
         """
-        chunk_idx = lambda chunk: re.findall("_(\d+)_\w\.aac", chunk)[0]
-        sort_chunks = lambda chunks: sorted(chunks, key=lambda x: int(chunk_idx(x)))
-        parse_chunks = lambda txt: re.findall("\n(chunk_.*)\n", txt, flags=re.I)
+
+        def chunk_idx(chunk: str) -> int:
+            return int(re.findall("_(\d+)_\w\.aac", chunk)[0])
+
+        def sort_chunks(chunks: list[str]) -> list[str]:
+            return sorted(chunks, key=lambda x: chunk_idx(x))
+
+        def parse_chunks(txt: str) -> list[str]:
+            return re.findall("\n(chunk_.*)\n", txt, flags=re.I)
 
         async def get_m3u8(client: AsyncClient, space: dict) -> dict:
             try:
@@ -920,23 +1054,27 @@ class AsyncScraper:
                 return await asyncio.gather(*(poll_space(c, space) for space in spaces))
 
         spaces = self.asyncSpaces(rooms=rooms)
-        #return asyncio.run(process(spaces))
+        # return asyncio.run(process(spaces))
         return await process(spaces)
 
     def _init_logger(self, **kwargs) -> Logger:
         if self.debug:
-            cfg = kwargs.get("log_config")
-            logging.config.dictConfig(cfg or LOG_CONFIG)
+            self.logger = logging.getLogger("asyncTwitter")
+            self.logger.setLevel(logging.DEBUG)  # Set the logging level for this logger
 
-            # only support one logger
-            logger_name = list(LOG_CONFIG["loggers"].keys())[0]
+            # Create a StreamHandler that sends log messages to stdout
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setLevel(logging.DEBUG)  # Set the logging level for this handler
 
-            # set level of all other loggers to ERROR
-            for name in logging.root.manager.loggerDict:
-                if name != logger_name:
-                    logging.getLogger(name).setLevel(logging.ERROR)
+            # Create a formatter and add it to the handler
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            handler.setFormatter(formatter)
 
-            return logging.getLogger(logger_name)
+            # Add the handler to the logger
+            self.logger.addHandler(handler)
+            return self.logger
 
     async def _async_validate_session(self, *args, **kwargs):
         email, username, password, session = args
@@ -949,24 +1087,27 @@ class AsyncScraper:
         if isinstance(cookies, dict) and all(
             cookies.get(c) for c in {"ct0", "auth_token"}
         ):
-            _session = AsyncClient(cookies=cookies, follow_redirects=True, proxies=proxies)
+            _session = AsyncClient(
+                cookies=cookies, follow_redirects=True, proxies=proxies
+            )
             _session.headers.update(get_headers(_session))
-            #print("Logging in from Cookies Dict 100%!!!")
+            # print("Logging in from Cookies Dict 100%!!!")
             return _session
 
         # try validating cookies from file
         if isinstance(cookies, str):
             _session = AsyncClient(
-                cookies=orjson.loads(Path(cookies).read_bytes()), follow_redirects=True,
-                proxies=proxies
+                cookies=orjson.loads(Path(cookies).read_bytes()),
+                follow_redirects=True,
+                proxies=proxies,
             )
             _session.headers.update(get_headers(_session))
-            #print("Logging in from Cookies File 100%!!!")
+            # print("Logging in from Cookies File 100%!!!")
             return _session
 
         # validate credentials
         if all((email, username, password)):
-            #print("Logging in from Credentials 100%!!!")
+            # print("Logging in from Credentials 100%!!!")
             return await asyncLogin(email, username, password, **kwargs)
 
         # invalid credentials, try validating session
