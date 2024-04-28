@@ -228,8 +228,6 @@ async def asyncExecuteLoginFlow(client: AsyncClient, **kwargs) -> AsyncClient | 
 
 
 async def asyncLogin(email: str, username: str, password: str, **kwargs) -> AsyncClient:
-    proxies = kwargs.pop("proxies", None)
-
     client = AsyncClient(
         cookies={
             "email": email,
@@ -246,10 +244,10 @@ async def asyncLogin(email: str, username: str, password: str, **kwargs) -> Asyn
             "x-twitter-client-language": "en",
         },
         follow_redirects=True,
-        proxies=proxies,
         http2=True,
         timeout=30,
         verify=False
+        **kwargs
     )
 
     client = await asyncExecuteLoginFlow(client, **kwargs)

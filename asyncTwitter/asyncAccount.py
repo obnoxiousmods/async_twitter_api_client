@@ -309,6 +309,8 @@ class AsyncAccount:
                 "proxies": proxies
             }
 
+        kwargs.update(**self.proxies)
+
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
 
         self.session = await self._async_validate_session(
