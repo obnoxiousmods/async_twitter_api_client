@@ -10,7 +10,9 @@ data/*
 images/*
 cookies/*
 *.json*
-
+*.html*
+unlock.html
+*.cookes*
 config.json
 
 # Distribution / packaging
