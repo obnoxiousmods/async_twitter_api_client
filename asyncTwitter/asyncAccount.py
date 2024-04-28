@@ -1054,10 +1054,7 @@ class AsyncAccount:
             session._init_with_cookies = True
             return session
 
-        raise Exception(
-            "Session not authenticated. "
-            "Please use an authenticated session or remove the `session` argument and try again."
-        )
+        return False
 
     async def _async_add_alt_text(self, media_id: int, text: str) -> Response:
         params = {"media_id": media_id, "alt_text": {"text": text}}
