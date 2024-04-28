@@ -3,9 +3,7 @@ import mimetypes
 import random
 import hashlib
 import time
-import logging
 import math
-import sys
 
 from logging import Logger
 from copy import deepcopy
@@ -33,6 +31,9 @@ from .util import (
     Path,
     get_cursor,
     GREEN,
+    CYAN,
+    YELLOW,
+    
 )
 from uuid import uuid1, getnode
 from string import ascii_letters
@@ -1079,23 +1080,24 @@ class AsyncAccount:
         return addAltTextResponse
 
     def _init_logger(self, **kwargs) -> Logger:
+        class logger:
+            def warning(self, *args):
+                print(f"{YELLOW}[-] WARNING: {args}{RESET}")
+            
+            def info(self, *args):
+                print(f"{GREEN}[+] INFO: {args}{RESET}")
+                
+            def debug(self, *args):
+                print(f"{CYAN}[+] DEBUG: {args}{RESET}")
+                
+            def error(self, *args):
+                print(f"{RED}[-] ERROR: {args}{RESET}")
+                
+            def critical(self, *args):
+                print(f"{RED}[!] CRITICAL: {args}{RESET}")
+                
         if self.debug:
-            self.logger = logging.getLogger("asyncTwitter")
-            self.logger.setLevel(logging.DEBUG)  # Set the logging level for this logger
-
-            # Create a StreamHandler that sends log messages to stdout
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setLevel(logging.DEBUG)  # Set the logging level for this handler
-
-            # Create a formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-
-            # Add the handler to the logger
-            self.logger.addHandler(handler)
-            return self.logger
+            self.logger = logger()
 
     def id(self) -> int:
         """Get User ID"""
