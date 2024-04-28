@@ -1008,7 +1008,7 @@ class AsyncAccount:
         return uploadMediaResponse.json().get("media_id_string")
 
     async def _async_validate_session(
-        self, email:str, username:str, password:str, session:str, cookies:dict, **kwargs
+        self, email:str, username:str, password:str, session:object, cookies:dict, **kwargs
     ):
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
@@ -1046,7 +1046,13 @@ class AsyncAccount:
 
         # validate credentials
         if all((email, username, password)):
-            session = await asyncLogin(email, username, password, **kwargs)
+            loginResults = await asyncLogin(email, username, password, **kwargs)
+            
+            if not loginResults:
+                return False
+            
+            session = loginResults
+            
             session._init_with_cookies = False
             # print("Logging with user pass 100%")
             return session
