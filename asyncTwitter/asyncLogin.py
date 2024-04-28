@@ -246,7 +246,7 @@ async def asyncLogin(email: str, username: str, password: str, **kwargs) -> Asyn
         follow_redirects=True,
         http2=True,
         timeout=30,
-        verify=False
+        verify=False,
         **kwargs
     )
 
