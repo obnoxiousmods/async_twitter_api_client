@@ -46,12 +46,12 @@ from urllib import parse
 class AsyncAccount:
     """The AsyncAccount class is used to interact with the Twitter API.
     It contains account specific methods like tweeting, liking, following, etc.
-    
+
     a = AsyncAccount(debug=True, twoCaptchaApiKey="2CaptchaKey")
     await a.asyncAuthenticate(email="email", password="password", username="username", cookies="cookies.json", proxies="http://)
     await a.asyncTweet("Hello World!")
     """
-    
+
     def __init__(
         self,
         save: bool = True,
@@ -87,13 +87,15 @@ class AsyncAccount:
         self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
 
         if httpxSocks:
-            self.transport = AsyncProxyTransport.from_url(proxies)
-            self.proxies = None
-            self.proxyString = proxies
+            self.proxies = {
+                "transport": AsyncProxyTransport.from_url(proxies),
+                "proxies": None
+            }
         else:
-            self.proxies = proxies
-            self.transport = None
-            self.proxyString = proxies
+            self.proxies = {
+                "transport": None,
+                "proxies": proxies
+            }
 
         # print(f'AsyncAcc Logger: {self.logger}')
 
@@ -122,11 +124,10 @@ class AsyncAccount:
         newClient = AsyncClient(
             headers=copyOfHeaders,
             cookies=dict(self.session.cookies),
-            transport=self.transport,
-            proxies=self.proxies,
             verify=False,
             timeout=30,
             http2=True,
+            **self.proxies,
         )
 
         if self.debug:
@@ -298,18 +299,25 @@ class AsyncAccount:
         self.cookies = cookies
 
         if httpxSocks:
-            self.transport = AsyncProxyTransport.from_url(proxies)
-            self.proxies = None
-            self.proxyString = proxies
+            self.proxies = {
+                "transport": AsyncProxyTransport.from_url(proxies),
+                "proxies": None
+            }
         else:
-            self.proxies = proxies
-            self.transport = None
-            self.proxyString = proxies
+            self.proxies = {
+                "transport": None,
+                "proxies": proxies
+            }
 
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
 
         self.session = await self._async_validate_session(
-            self.email, self.username, self.password, session, **kwargs
+            email=self.email,
+            username=self.username,
+            password=self.password,
+            session=session,
+            cookies=self.cookies,
+            **kwargs,
         )
 
         return self.session
@@ -997,12 +1005,10 @@ class AsyncAccount:
 
         return uploadMediaResponse.json().get("media_id_string")
 
-    @staticmethod
-    async def _async_validate_session(email, username, password, session, **kwargs):
+    async def _async_validate_session(
+        self, email:str, username:str, password:str, session:str, cookies:dict, **kwargs
+    ):
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
-
-        # invalid credentials and session
-        cookies = kwargs.get("cookies")
 
         # try validating cookies dict
         if isinstance(cookies, dict) and all(
@@ -1011,10 +1017,10 @@ class AsyncAccount:
             _session = AsyncClient(
                 cookies=cookies,
                 follow_redirects=True,
-                proxies=kwargs.pop("proxies", None),
                 http2=True,
                 verify=False,
                 timeout=30,
+                **self.proxies,
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
@@ -1026,10 +1032,10 @@ class AsyncAccount:
             _session = AsyncClient(
                 cookies=orjson.loads(Path(cookies).read_bytes()),
                 follow_redirects=True,
-                proxies=kwargs.pop("proxies", None),
                 http2=True,
                 verify=False,
                 timeout=30,
+                **self.proxies,
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
