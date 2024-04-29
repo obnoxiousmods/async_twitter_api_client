@@ -275,6 +275,7 @@ class AsyncAccount:
         if (
             "your account is now available for use" in unlockResponse.text.lower()
             or '<div class="textgroup-text">' in unlockResponse.text.lower()
+            or "https://twitter.com/?lang" in str(unlockResponse.url)
         ):
             unlocked = True
         else:
