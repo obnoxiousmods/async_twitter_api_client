@@ -326,6 +326,10 @@ class AsyncAccount:
             cookies=self.cookies,
             **kwargs,
         )
+        
+        if not self.session:
+            self.logger.error(f"Failed to authenticate account: {self.username}")
+            return None
 
         return self.session
 
