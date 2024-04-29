@@ -1084,19 +1084,19 @@ class AsyncAccount:
     def _init_logger(self, **kwargs) -> Logger:
         class logger:
             def warning(self, *args):
-                print(f"{Fore.YELLOW}[-] WARNING: {args}{RESET}")
+                print(f"{Fore.YELLOW}[-] WARNING: {args[0]}{RESET}")
             
             def info(self, *args):
-                print(f"{GREEN}[+] INFO: {args}{RESET}")
+                print(f"{GREEN}[+] INFO: {args[0]}{RESET}")
                 
             def debug(self, *args):
-                print(f"{Fore.CYAN}[+] DEBUG: {args}{RESET}")
+                print(f"{Fore.CYAN}[+] DEBUG: {args[0]}{RESET}")
                 
             def error(self, *args):
-                print(f"{RED}[-] ERROR: {args}{RESET}")
+                print(f"{RED}[-] ERROR: {args[0]}{RESET}")
                 
             def critical(self, *args):
-                print(f"{RED}[!] CRITICAL: {args}{RESET}")
+                print(f"{RED}[!] CRITICAL: {args[0]}{RESET}")
                 
         self.logger = logger()
         
