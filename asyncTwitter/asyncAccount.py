@@ -361,7 +361,7 @@ class AsyncAccount:
             k: int(v) for k, v in gqlResponse.headers.items() if "rate-limit" in k
         }
         if self.debug:
-            log(self.logger, self.debug, gqlResponse)
+            log(self.logger, gqlResponse)
         return gqlResponse.json()
 
     async def asyncV1(self, path: str, params: dict) -> dict:
@@ -371,7 +371,7 @@ class AsyncAccount:
             f"{self.v1_api}/{path}", headers=headers, data=urlencode(params)
         )
         if self.debug:
-            log(self.logger, self.debug, v1Response)
+            log(self.logger, v1Response)
         return v1Response.json()
 
     async def asyncCreatePoll(
