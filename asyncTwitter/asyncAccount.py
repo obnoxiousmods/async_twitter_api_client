@@ -153,7 +153,7 @@ class AsyncAccount:
 
         if self.debug:
             self.logger.info(
-                f"Authenticity Token Found, getting solved Captcha...: {authenticityToken}"
+                f"[UNLOCK {self.username}] Authenticity Token Found, getting solved Captcha...: {authenticityToken}"
             )
 
         if self.proxyString:
@@ -187,7 +187,7 @@ class AsyncAccount:
         captchaTaskId = submitCaptchaTask.get("taskId")
 
         if self.debug:
-            self.logger.debug(f"Captcha Task ID: {captchaTaskId}")
+            self.logger.debug(f"[UNLOCK {self.username}] Captcha Task ID: {captchaTaskId}")
 
         captchaResults = await self.twoCaptcha.checkTaskUntilFinished(
             captchaTaskId, sleepTime=15, maxRetries=20
@@ -196,7 +196,7 @@ class AsyncAccount:
         solutionToken = captchaResults.get("solution", {}).get("token")
 
         if self.debug:
-            self.logger.debug(f"Captcha Solution Token: {solutionToken}")
+            self.logger.debug(f"[UNLOCK {self.username}] Captcha Solution Token: {solutionToken}")
 
         if not solutionToken:
             if self.debug:
@@ -223,7 +223,7 @@ class AsyncAccount:
 
         if self.debug:
             self.logger.debug(
-                f"Captcha Unlock: {unlocked} | Unlock Response status_code: {unlockResponse.status_code}"
+                f"[UNLOCK {self.username}] Captcha Unlock: {unlocked} | Unlock Response status_code: {unlockResponse.status_code}"
             )
             print(unlockResponse.text, file=open("unlock.html", "w", encoding="utf-8"))
 
