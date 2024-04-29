@@ -35,6 +35,7 @@ from .util import (
 from colorama import Fore
 from uuid import uuid1, getnode
 from string import ascii_letters
+
 try:
     from asyncTwitter.twoCaptcha import TwoCaptcha
 except Exception:
@@ -92,13 +93,10 @@ class AsyncAccount:
         if httpxSocks:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies),
-                "proxies": None
+                "proxies": None,
             }
         else:
-            self.proxies = {
-                "transport": None,
-                "proxies": proxies
-            }
+            self.proxies = {"transport": None, "proxies": proxies}
 
         # print(f'AsyncAcc Logger: {self.logger}')
 
@@ -116,13 +114,52 @@ class AsyncAccount:
 
         copyOfHeaders = dict(self.session.headers.copy())
         copyOfHeaders.pop("authorization", None)
+        copyOfHeaders.pop("x-csrf-token", None)
+        copyOfHeaders.pop("x-twitter-auth-type", None)
+        copyOfHeaders.pop("x-guest-token", None)
+        copyOfHeaders.pop("x-twitter-active-user", None)
+        copyOfHeaders.pop("x-twitter-client-language", None)
+        copyOfHeaders.pop("connection", None)
+        copyOfHeaders.pop("cookie", None)
+        submitHeaders = {
+            "cache-control": "max-age=0",
+            "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "upgrade-insecure-requests": "1",
+            "origin": "https://twitter.com",
+            "content-type": "application/x-www-form-urlencoded",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-user": "?1",
+            "sec-fetch-dest": "document",
+            "referer": "https://twitter.com/account/access",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "priority": "u=0, i",
+        }
 
-        copyOfHeaders["accept"] = (
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-        )
-        copyOfHeaders["referer"] = "https://twitter.com/account/access"
-        copyOfHeaders["content-type"] = "application/x-www-form-urlencoded"
-        # Authorization is removed cuz it causes a 403? Not sure why...
+        getHeaders = {
+            "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "upgrade-insecure-requests": "1",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-user": "?1",
+            "sec-fetch-dest": "document",
+            "referer": "https://twitter.com/i/flow/login",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "priority": "u=0, i",
+            # "cookie": '_ga=GA1.2.396964430.1714338740; _gid=GA1.2.792491738.1714338740; kdt=m12M1xdg7Mw0a3TbACWbIZJlu8VBUL2P6A5dpJYj; lang=en; dnt=1; guest_id=v1%3A171436913069729690; guest_id_marketing=v1%3A171436913069729690; guest_id_ads=v1%3A171436913069729690; personalization_id="v1_m3Td5kYJdlAANN2W+uUNhw=="; gt=1784819612883832954; _twitter_sess=BAh7CSIKZmxhc2hJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNo%250ASGFzaHsABjoKQHVzZWR7ADoPY3JlYXRlZF9hdGwrCGQKXSiPAToMY3NyZl9p%250AZCIlMzRkMjJmOTBjYWU0ZWNjZTgwNDAyMzFiYzMzZDY2NjA6B2lkIiUyNmU0%250AMDdlN2YzZGQzYzFkNjBkZTZmMjllMGVmMWIxNg%253D%253D--2c40ae37af3d86c0038dd6e274d5e855ca2573d8; twid="u=1061735362350014464"; auth_token=20e72527a43d3f80ff1aff5e1db0512bfc54e182; ct0=0dee2493408e84c1bc084e1ba6ebab9cfbbe1b46edfae1b2c00bcc852e780560d78782f9354cbd7cc52f5de18d3a001d2376eb4cf93b72d22196e796eace1a782bc66d02a54e4cd46336d1e844a0ad14',
+        }
+
+        params = {"lang": "en"}
 
         newClient = AsyncClient(
             headers=copyOfHeaders,
@@ -140,9 +177,17 @@ class AsyncAccount:
             )
 
         endpointUrl = "https://twitter.com/account/access"
-        params = {"lang": "en"}
 
-        getRespForData = await newClient.get(endpointUrl, params=params)
+        getRespForData = await newClient.get(
+            endpointUrl,
+            # params=params,
+            headers=getHeaders,
+        )
+
+        if self.debug:
+            print(
+                getRespForData.text, file=open("unlockGet.html", "w", encoding="utf-8")
+            )
 
         authenticityToken = getRespForData.text.split(
             '<input type="hidden" name="authenticity_token" value="'
@@ -150,6 +195,9 @@ class AsyncAccount:
         assignmentToken = getRespForData.text.split(
             '<input type="hidden" name="assignment_token" value="'
         )[1].split('"')[0]
+        lang = getRespForData.text.split('<input type="hidden" name="lang" value="')[
+            1
+        ].split('"')[0]
 
         if self.debug:
             self.logger.info(
@@ -187,7 +235,9 @@ class AsyncAccount:
         captchaTaskId = submitCaptchaTask.get("taskId")
 
         if self.debug:
-            self.logger.debug(f"[UNLOCK {self.username}] Captcha Task ID: {captchaTaskId}")
+            self.logger.debug(
+                f"[UNLOCK {self.username}] Captcha Task ID: {captchaTaskId}"
+            )
 
         captchaResults = await self.twoCaptcha.checkTaskUntilFinished(
             captchaTaskId, sleepTime=15, maxRetries=20
@@ -196,7 +246,9 @@ class AsyncAccount:
         solutionToken = captchaResults.get("solution", {}).get("token")
 
         if self.debug:
-            self.logger.debug(f"[UNLOCK {self.username}] Captcha Solution Token: {solutionToken}")
+            self.logger.debug(
+                f"[UNLOCK {self.username}] Captcha Solution Token: {solutionToken}"
+            )
 
         if not solutionToken:
             if self.debug:
@@ -206,14 +258,18 @@ class AsyncAccount:
         payload = {
             "authenticity_token": authenticityToken,
             "assignment_token": assignmentToken,
-            "lang": "en",
+            "lang": lang,
             "flow": "",
             "verification_string": solutionToken,  # Captcha solve
-            "language_code": "en",
+            "language_code": lang,
         }
 
         unlockResponse = await newClient.post(
-            endpointUrl, params=params, data=payload, follow_redirects=True
+            endpointUrl,
+            data=payload,
+            follow_redirects=True,
+            # params=params,
+            headers=submitHeaders,
         )
 
         if "Your account is now available for use." in unlockResponse.text:
@@ -237,20 +293,24 @@ class AsyncAccount:
             finishPayload = {
                 "authenticity_token": authenticityToken,
                 "assignment_token": assignmentToken,
-                "lang": "en",
+                "lang": lang,
                 "flow": "",
-                "ui_metrics": {  # What the fuck is this? Thinking of just making it random
+                "ui_metrics": {  # What the fuck is this? Thinking of randomizing values or keys + values at same length and type
                     "rf": {
-                        "a164b41fad0433b3eb8ef1474015a1c192606f211d5cab98860739135a6f57d2": -111,
+                        "a164b41fad0433b3eb8ef1474015a1c192606f211d5cab98860739135a6f57d2": -110,
                         "a846abda2338f92a076af6e5f40e8171ddfa1f5f802abc62f1fb39cfd0138301": -1,
                         "ace36e17c04cb2475c443874a57310e469013dbecf948d84137d12b6ad71e025": 0,
-                        "a25211b004a8e34850978eeb17bab27bca8653a820c1c58442766f317ce2f965": -128,
+                        "a25211b004a8e34850978eeb17bab27bca8653a820c1c58442766f317ce2f965": -127,
                     },
                     "s": "s0TtDv7i3G_2y2Dx1m-IOiI6st_0zRgRrfYDgKHX7jpHDp0q0bm2Bj7youdKVhxivyJTOpD0t6QrhVGbeUwN3rGreAE2p06HTYtVT_iWDmwdHTmbrOoFM4ws3pNLHb7AGB6ceguzlW8J51qGwY1DrCLFxMFm3_rQ6T0Cu7gp1CsVutURjyEdzecozhS57mEaryVBaxImglAON7SbByk-cOj5FMki6pH3SxFvaOaA3A1Y7CiOU7pQ07KdFhCUcyfM1xkWY3kdH9-lw9sOPBaTrjX15d0L6RTnEcsqtINE8NNZJ5QFaXLNbrlEtSGW29ugUlZphX5Z24iM1-Zn6g6uBgAAAY8W4QwM",
                 },
             }
             finishUnlockResp = await newClient.post(
-                endpointUrl, data=finishPayload, follow_redirects=True
+                endpointUrl,
+                data=finishPayload,
+                follow_redirects=True,
+                headers=submitHeaders,
+                # params=params
             )
 
             if "https://twitter.com/?lang" in str(finishUnlockResp.url):
@@ -300,19 +360,16 @@ class AsyncAccount:
         self.twitterId = False
         self.twitterRestId = False
         self.cookies = cookies
-        
+
         self.proxyString = proxies
 
         if httpxSocks:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies),
-                "proxies": None
+                "proxies": None,
             }
         else:
-            self.proxies = {
-                "transport": None,
-                "proxies": proxies
-            }
+            self.proxies = {"transport": None, "proxies": proxies}
 
         kwargs.update(**self.proxies)
 
@@ -326,7 +383,7 @@ class AsyncAccount:
             cookies=self.cookies,
             **kwargs,
         )
-        
+
         if not self.session:
             self.logger.error(f"Failed to authenticate account: {self.username}")
             return None
@@ -1017,7 +1074,13 @@ class AsyncAccount:
         return uploadMediaResponse.json().get("media_id_string")
 
     async def _async_validate_session(
-        self, email:str, username:str, password:str, session:object, cookies:dict, **kwargs
+        self,
+        email: str,
+        username: str,
+        password: str,
+        session: object,
+        cookies: dict,
+        **kwargs,
     ):
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
@@ -1037,7 +1100,9 @@ class AsyncAccount:
             _session.headers.update(get_headers(_session))
             # print("Logging with cookies Dict 100%")
             if self.debug:
-                self.logger.debug(f"{GREEN}{self.username} Logged in with cookies dict{RESET}")
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with cookies dict{RESET}"
+                )
             return _session
 
         # try validating cookies from file
@@ -1053,22 +1118,26 @@ class AsyncAccount:
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
             if self.debug:
-                self.logger.debug(f"{GREEN}{self.username} Logged in with cookies file{RESET}")
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with cookies file{RESET}"
+                )
             return _session
 
         # validate credentials
         if all((email, username, password)) and not session and not cookies:
             loginResults = await asyncLogin(email, username, password, **kwargs)
-            
+
             if not loginResults:
                 return False
-            
+
             session = loginResults
-            
+
             session._init_with_cookies = False
             # print("Logging with user pass 100%")
             if self.debug:
-                self.logger.debug(f"{GREEN}{self.username} Logged in with user/pass{RESET}")
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with user/pass{RESET}"
+                )
             return session
 
         # invalid credentials, try validating session
@@ -1090,21 +1159,21 @@ class AsyncAccount:
         class logger:
             def warning(self, *args):
                 print(f"{Fore.YELLOW}[-] WARNING: {args[0]}{RESET}")
-            
+
             def info(self, *args):
                 print(f"{GREEN}[+] INFO: {args[0]}{RESET}")
-                
+
             def debug(self, *args):
                 print(f"{Fore.CYAN}[+] DEBUG: {args[0]}{RESET}")
-                
+
             def error(self, *args):
                 print(f"{RED}[-] ERROR: {args[0]}{RESET}")
-                
+
             def critical(self, *args):
                 print(f"{RED}[!] CRITICAL: {args[0]}{RESET}")
-                
+
         self.logger = logger()
-        
+
         return self.logger
 
     def id(self) -> int:

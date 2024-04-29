@@ -31,15 +31,15 @@ async def testAccount():
     #    "auth_token": "egfwiopjgew90pgj4w9gugh89u0f",
     # }
     
-    if os.path.exists("cookies/testing.cookies"):
+    if os.path.exists("cookies/testing.cookies.cookies"):
         kwargs = {
-            "cookies": "cookies/testing.cookies",
+            "cookies": "cookies/testing.cookies.cookies",
         }
     else:
         kwargs = {
-            "email": "joseph_hernandez95@yahoo.com",
-            "password": "fMd5HcYEVKh9",
-            "username": "onecoolbrooo",
+            "email": "sbillingsley316@yahoo.com",
+            "password": "5682szvzcg",
+            "username": "SamanthaB117",
         }
 
     if await twitter.asyncAuthenticate(
@@ -48,6 +48,9 @@ async def testAccount():
         **kwargs,
     ):
         twitter.save_cookies(fname="cookies/testing.cookies", toFile=True)
+    else:
+        print("Failed to authenticate.")
+        exit()
 
     results1 = await twitter.asyncLike(tweet_id="1783497801906696316")
 

@@ -230,9 +230,9 @@ async def asyncExecuteLoginFlow(client: AsyncClient, **kwargs) -> AsyncClient | 
 async def asyncLogin(email: str, username: str, password: str, **kwargs) -> AsyncClient:
     client = AsyncClient(
         cookies={
-            "email": email,
-            "username": username,
-            "password": password,
+            #"email": email,
+            #"username": username,
+            #"password": password,
             "guest_token": None,
             "flow_token": None,
         },
