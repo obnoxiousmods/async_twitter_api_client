@@ -276,6 +276,11 @@ class AsyncAccount:
             unlocked = True
         else:
             unlocked = False
+            
+        if not unlocked and '<div class="TextGroup-text">' in unlockResponse.text:
+            unlocked = True
+        else:
+            unlocked = False
 
         if self.debug:
             self.logger.debug(
