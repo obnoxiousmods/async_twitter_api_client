@@ -126,7 +126,7 @@ class AsyncAccount:
 
         newClient = AsyncClient(
             headers=copyOfHeaders,
-            cookies=dict(self.session.cookies),
+            cookies=self.session.cookies,
             verify=False,
             timeout=30,
             http2=True,
