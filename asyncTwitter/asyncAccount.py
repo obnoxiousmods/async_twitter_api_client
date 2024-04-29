@@ -268,7 +268,7 @@ class AsyncAccount:
             endpointUrl,
             data=payload,
             follow_redirects=True,
-            # params=params,
+            params=params,
             headers=submitHeaders,
         )
 
@@ -310,7 +310,7 @@ class AsyncAccount:
                 data=finishPayload,
                 follow_redirects=True,
                 headers=submitHeaders,
-                # params=params
+                params=params
             )
 
             if "https://twitter.com/?lang" in str(finishUnlockResp.url):
