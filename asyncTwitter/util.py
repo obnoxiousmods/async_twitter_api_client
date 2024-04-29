@@ -178,46 +178,17 @@ def find_key(obj: any, key: str) -> list:
     return helper(obj, key, [])
 
 
-def log(logger: Logger, level: int, r: Response):
-    def stat(r, txt, data):
-        if level >= 1:
-            logger.debug(f"{r.url.path}")
-        if level >= 2:
-            logger.debug(f"{r.url}")
-        if level >= 3:
-            logger.debug(f"{txt}")
-        if level >= 4:
-            logger.debug(f"{data}")
-
-        try:
-            limits = {k: v for k, v in r.headers.items() if "x-rate-limit" in k}
-            current_time = int(time.time())
-            wait = int(r.headers.get("x-rate-limit-reset", current_time)) - current_time
-            remaining = limits.get("x-rate-limit-remaining")
-            limit = limits.get("x-rate-limit-limit")
-            logger.debug(f"remaining: {MAGENTA}{remaining}/{limit}{RESET} requests")
-            logger.debug(f"reset:     {MAGENTA}{(wait / 60):.2f}{RESET} minutes")
-        except Exception as e:
-            logger.error(f"Rate limit info unavailable: {e}")
-
-    try:
-        status = r.status_code
-        (
-            txt,
-            data,
-        ) = r.text, r.json()
-        if "json" in r.headers.get("content-type", ""):
-            if data.get("errors") and not find_key(data, "instructions"):
-                logger.error(f"[{RED}error{RESET}] {status} {data}")
-            else:
-                logger.debug(fmt_status(status))
-                stat(r, txt, data)
-        else:
-            logger.debug(fmt_status(status))
-            stat(r, txt, {})
-    except Exception as e:
-        logger.error(f"Failed to log: {e}")
-
+def log(logger: Logger, resp: Response):
+    #x-rate-limit-reset
+    #x-rate-limit-remaining
+    #x-rate-limit-limit
+    
+    limitRemaining = resp.headers.get("x-rate-limit-remaining", 0)
+    limitReset = resp.headers.get("x-rate-limit-reset", 0)
+    limit = resp.headers.get("x-rate-limit-limit", 0)
+    
+    logger.info(f"[{resp.status_code}] {resp.url} | Rate limit: {limitRemaining}/{limit} resets in {limitReset}")
+    return True
 
 def fmt_status(status: int) -> str:
     color = None
