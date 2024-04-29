@@ -1036,6 +1036,8 @@ class AsyncAccount:
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
             # print("Logging with cookies Dict 100%")
+            if self.debug:
+                self.logger.debug(f"{GREEN}{self.username} Logged in with cookies dict{RESET}")
             return _session
 
         # try validating cookies from file
@@ -1050,7 +1052,8 @@ class AsyncAccount:
             )
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            # print("Logging with cookies File 100%")
+            if self.debug:
+                self.logger.debug(f"{GREEN}{self.username} Logged in with cookies file{RESET}")
             return _session
 
         # validate credentials
@@ -1064,6 +1067,8 @@ class AsyncAccount:
             
             session._init_with_cookies = False
             # print("Logging with user pass 100%")
+            if self.debug:
+                self.logger.debug(f"{GREEN}{self.username} Logged in with user/pass{RESET}")
             return session
 
         # invalid credentials, try validating session
