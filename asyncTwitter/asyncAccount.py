@@ -272,12 +272,10 @@ class AsyncAccount:
             headers=submitHeaders,
         )
 
-        if "Your account is now available for use." in unlockResponse.text:
-            unlocked = True
-        else:
-            unlocked = False
-            
-        if not unlocked and '<div class="TextGroup-text">' in unlockResponse.text:
+        if (
+            "your account is now available for use" in unlockResponse.text.lower()
+            or '<div class="textgroup-text">' in unlockResponse.text.lower()
+        ):
             unlocked = True
         else:
             unlocked = False
@@ -315,7 +313,7 @@ class AsyncAccount:
                 data=finishPayload,
                 follow_redirects=True,
                 headers=submitHeaders,
-                params=params
+                params=params,
             )
 
             if "https://twitter.com/?lang" in str(finishUnlockResp.url):
