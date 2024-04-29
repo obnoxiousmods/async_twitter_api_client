@@ -1054,7 +1054,7 @@ class AsyncAccount:
             return _session
 
         # validate credentials
-        if all((email, username, password)):
+        if all((email, username, password)) and not session and not cookies:
             loginResults = await asyncLogin(email, username, password, **kwargs)
             
             if not loginResults:
