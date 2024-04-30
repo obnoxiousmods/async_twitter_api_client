@@ -105,7 +105,7 @@ async def asyncFlowUsername(client: AsyncClient) -> AsyncClient:
                                 "key": "user_identifier",
                                 "response_data": {
                                     "text_data": {
-                                        "result": client.cookies.get("username")
+                                        "result": client.authDetails.get("username")
                                     }
                                 },
                             }
@@ -129,7 +129,7 @@ async def asyncFlowPassword(client: AsyncClient) -> AsyncClient:
                 {
                     "subtask_id": "LoginEnterPassword",
                     "enter_password": {
-                        "password": client.cookies.get("password"),
+                        "password": client.authDetails.get("password"),
                         "link": "next_link",
                     },
                 }
@@ -248,6 +248,11 @@ async def asyncLogin(email: str, username: str, password: str, **kwargs) -> Asyn
         verify=False,
         **kwargs
     )
+    client.authDetails = {
+        "email": email,
+        "username": username,
+        "password": password,
+    }
 
     client = await asyncExecuteLoginFlow(client, **kwargs)
     if not client or client.cookies.get("flow_errors") == "true":

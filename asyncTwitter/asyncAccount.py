@@ -1100,6 +1100,7 @@ class AsyncAccount:
                 timeout=30,
                 **self.proxies,
             )
+            _session.authDetails = {"username": username, "password": password, "email": email}
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
             # print("Logging with cookies Dict 100%")
@@ -1119,6 +1120,7 @@ class AsyncAccount:
                 timeout=30,
                 **self.proxies,
             )
+            _session.authDetails = {"username": username, "password": password, "email": email}
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
             if self.debug:
