@@ -90,7 +90,7 @@ class AsyncAccount:
         self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
         self.proxyString = proxies
 
-        if httpxSocks:
+        if httpxSocks and proxies:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies),
                 "proxies": None,
