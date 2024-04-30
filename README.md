@@ -14,6 +14,7 @@ All I have done is changed the client to asyncClient
 
 # Features (almost all are provided in original repo)
 
+```
 tweet (asyncAccount.py)
 reply (with or without images)
 quote (with or without images)
@@ -23,7 +24,7 @@ pin tweets
 change user profile bio, username, avatar etc etc
 scrape user data, tweets, followers following etc (asyncScraper)
 search (asyncSearch.py)
-
+```
 
 # Key Differences
 
