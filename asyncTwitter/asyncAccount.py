@@ -98,6 +98,8 @@ class AsyncAccount:
         else:
             self.proxies = {"transport": None, "proxies": proxies}
 
+        self.ogProxyString = proxies
+
         # print(f'AsyncAcc Logger: {self.logger}')
 
     async def unlockViaArkoseCaptcha(self) -> dict:
@@ -364,14 +366,13 @@ class AsyncAccount:
         self.twitterId = False
         self.twitterRestId = False
         self.cookies = cookies
-
+        self.ogProxyString = proxies
         self.proxyString = proxies
 
         if httpxSocks and proxies:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies),
                 "proxies": None,
-                "og": proxies,
             }
         else:
             self.proxies = {"transport": None, "proxies": proxies}
@@ -1090,7 +1091,7 @@ class AsyncAccount:
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
         if self.debug:
-            self.logger.debug(f"{Fore.MAGENTA}Validating session with pString: {self.proxyString} selfProxies: {self.proxies}{RESET}")
+            self.logger.debug(f"{Fore.MAGENTA}Validating session with pString: {self.proxyString} selfProxies: {self.proxies} ogProxyString: {self.ogProxyString}{RESET}")
 
         # try validating cookies dict
         if isinstance(cookies, dict) and all(
