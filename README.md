@@ -24,6 +24,7 @@ pin tweets
 change user profile bio, username, avatar etc etc
 scrape user data, tweets, followers following etc (asyncScraper)
 search (asyncSearch.py)
+unlock account via arkose captcha solving (2captcha API)
 ```
 
 # Key Differences
