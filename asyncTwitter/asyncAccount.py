@@ -1089,7 +1089,7 @@ class AsyncAccount:
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
         if self.debug:
-            self.logger.debug(f"{Fore.MAGENTA}Validating session with {self.proxyString}{RESET}")
+            self.logger.debug(f"{Fore.MAGENTA}Validating session with pString: {self.proxyString} selfProxies: {self.proxies}{RESET}")
 
         # try validating cookies dict
         if isinstance(cookies, dict) and all(
