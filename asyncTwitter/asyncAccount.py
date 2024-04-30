@@ -367,10 +367,11 @@ class AsyncAccount:
 
         self.proxyString = proxies
 
-        if httpxSocks:
+        if httpxSocks and proxies:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies),
                 "proxies": None,
+                "og": proxies,
             }
         else:
             self.proxies = {"transport": None, "proxies": proxies}
