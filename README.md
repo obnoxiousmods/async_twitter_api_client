@@ -1,3 +1,8 @@
+# THIS PACKAGE + REPO IS UNDER CONSTANT DEVELOPMENT, DO NOT BE SURPRISED IF SOMETHING IS BROKEN. PLEASE REPORT ASAP TO ISSUES IF YOU FIND ANY ISSUES
+
+# HEAVILY RECOMMEND CLONING REPO INSTEAD OF USING PYPI PACKAGE AS LONG AS THIS MESSAGE IS HERE
+
+
 # asyncTwitterClient
 
 Async port of twitter-api-client
@@ -6,6 +11,21 @@ Async port of twitter-api-client
 
 MASSIVE Thank you to Trevor Hobenshield @trevorhobenshield for making this!
 All I have done is changed the client to asyncClient 
+
+# Features (almost all are provided in original repo)
+
+```
+tweet (asyncAccount.py)
+reply (with or without images)
+quote (with or without images)
+retweet
+like
+pin tweets
+change user profile bio, username, avatar etc etc
+scrape user data, tweets, followers following etc (asyncScraper)
+search (asyncSearch.py)
+unlock account via arkose captcha solving (2captcha API)
+```
 
 # Key Differences
 
