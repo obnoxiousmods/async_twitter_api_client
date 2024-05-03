@@ -1,23 +1,46 @@
 import random
 import re
 import time
+import secrets
+import string
+
 from logging import Logger
 from pathlib import Path
 from urllib.parse import urlsplit, urlencode, urlunsplit, parse_qs, quote
 
 import orjson
-from httpx import Response, Client
+from httpx import Response, AsyncClient
 
-from .constants import GREEN, MAGENTA, RED, RESET, ID_MAP
+from .constants import GREEN, MAGENTA, RED, RESET, ID_MAP, USER_AGENTS
 
 
-def init_session():
-    client = Client(
+def generate_random_string(length):
+    characters = string.ascii_letters + string.digits
+    return "".join(random.choice(characters) for i in range(length))
+
+
+def randomLivePipelineSession():
+    # 'LivePipeline-Session': '4cc59a77-31a2-4ed0-8246-ada14c86d528',
+
+    return f"{generate_random_string(8)}-{generate_random_string(4)}-{generate_random_string(4)}-{generate_random_string(4)}-{generate_random_string(12)}"
+
+
+def randomTransactionId():
+    x_client_transaction_id = f"{generate_random_string(19)}/{generate_random_string(3)}/{generate_random_string(18)}+{generate_random_string(51)}"
+    return x_client_transaction_id
+
+
+def init_session(**kwargs):
+    client = AsyncClient(
         headers={
             "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+            "user-agent": random.choice(USER_AGENTS),
         },
         follow_redirects=True,
+        http2=True,
+        timeout=30,
+        verify=False,
+        **kwargs,
     )
     r = client.post("https://api.twitter.com/1.1/guest/activate.json").json()
     client.headers.update(
@@ -130,17 +153,34 @@ def get_headers(session, **kwargs) -> dict:
             cookies.delete("ct0", domain=".twitter.com")
     except Exception:
         ...
-    headers = kwargs | {
-        "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
-        "cookie": "; ".join(f"{k}={v}" for k, v in cookies.items()),
-        "referer": "https://twitter.com/",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-        "x-csrf-token": cookies.get("ct0", ""),
-        "x-guest-token": cookies.get("guest_token", ""),
-        "x-twitter-auth-type": "OAuth2Session" if cookies.get("auth_token") else "",
-        "x-twitter-active-user": "yes",
-        "x-twitter-client-language": "en",
-    }
+    headers = (
+        kwargs
+        | {
+            "User-Agent": random.choice(USER_AGENTS),
+            "Accept": "*/*",
+            "Accept-Language": "en-CA,en-US;q=0.7,en;q=0.3",
+            "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs=1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
+            "LivePipeline-Session": randomLivePipelineSession(),  #'4cc59a77-31a2-4ed0-8246-ada14c86d528',
+            # "cookie": "; ".join(f"{k}={v}" for k, v in cookies.items()),
+            "Referer": "https://twitter.com/",
+            "x-csrf-token": cookies.get("ct0", ""),
+            "x-guest-token": cookies.get("guest_token", ""),
+            "x-twitter-auth-type": "OAuth2Session" if cookies.get("auth_token") else "",
+            "x-twitter-active-user": "yes",
+            "x-twitter-client-language": "en",
+            "Origin": "https://twitter.com",
+            "DNT": "1",
+            "Sec-GPC": "1",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-site",
+            "Connection": "keep-alive",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
+            # oLYdXdvdHrDENpgQRhn/c2v/cj3SoIX67EyajoIa5y+ZmpxGNKiEFT1WlnSFv1BrQUVHRaFLp1c2Xx1iMaGOeqYgtygDow
+            "x-client-transaction-id": randomTransactionId(),
+        }
+    )
     return dict(sorted({k.lower(): v for k, v in headers.items()}.items()))
 
 
@@ -179,16 +219,19 @@ def find_key(obj: any, key: str) -> list:
 
 
 def log(logger: Logger, resp: Response):
-    #x-rate-limit-reset
-    #x-rate-limit-remaining
-    #x-rate-limit-limit
-    
+    # x-rate-limit-reset
+    # x-rate-limit-remaining
+    # x-rate-limit-limit
+
     limitRemaining = resp.headers.get("x-rate-limit-remaining", 0)
     limitReset = resp.headers.get("x-rate-limit-reset", 0)
     limit = resp.headers.get("x-rate-limit-limit", 0)
-    
-    logger.info(f"[{resp.status_code}] {resp.url} | Rate limit: {limitRemaining}/{limit} resets in {limitReset}")
+
+    logger.info(
+        f"[{resp.status_code}] {resp.url} | Rate limit: {limitRemaining}/{limit} resets in {limitReset}"
+    )
     return True
+
 
 def fmt_status(status: int) -> str:
     color = None

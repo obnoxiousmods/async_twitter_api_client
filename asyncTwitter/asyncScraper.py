@@ -960,7 +960,7 @@ class AsyncScraper:
         """
 
         async def get(spaces: list[dict]):
-            client = init_session()
+            client = init_session(proxies=self.proxies)
             chats = await self._get_live_chats(client, spaces)
             await asyncio.gather(*(self._space_listener(c, frequency) for c in chats))
 
