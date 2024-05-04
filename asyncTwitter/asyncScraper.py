@@ -78,14 +78,15 @@ class AsyncScraper:
         self.logger = self._init_logger(**kwargs)
         self.max_connections = kwargs.get("max_connections", 100)
 
-        if httpxSocks:
-            self.transport = AsyncProxyTransport.from_url(proxies)
-            self.proxies = None
-            self.proxyString = proxies
+        if httpxSocks and proxies:
+            self.proxies = {
+                "transport": AsyncProxyTransport.from_url(proxies),
+                "proxies": None,
+            }
         else:
-            self.proxies = proxies
-            self.transport = None
-            self.proxyString = proxies
+            self.proxies = {"transport": None, "proxies": proxies}
+
+        self.ogProxyString = proxies
 
 
         # print(f'Logger: {self.logger}')
