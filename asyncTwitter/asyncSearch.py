@@ -130,13 +130,30 @@ class AsyncSearch:
 
         return self.session
 
-    async def asyncRun(
+    async def asyncSearch(
         self,
         queries: list[dict],
-        limit: int = math.inf,
+        limit: int = 50,
         out: str = "data/search_results",
         **kwargs,
     ):
+        """Search twitter for a list of queries
+        
+        queries = [
+            {
+                "query": "drake is the goat",
+                "category": "Latest",
+            }
+        ]
+
+        Args:
+            queries (list[dict]): List of queries to search for.
+            limit (int, optional): Maximum results. Defaults to 50.
+            out (str, optional): Output directory for results. Defaults to "data/search_results".
+
+        Returns:
+            list: results of the search
+        """
         out = Path(out)
         out.mkdir(parents=True, exist_ok=True)
         processResults = await self.process(queries, limit, out, **kwargs)

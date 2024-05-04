@@ -14,7 +14,7 @@ async def testSearch():
     await search.asyncAuthenticate(
         cookies="C:/Users/a/Documents/Git/infiniteMoneyTwitterBot/cookies/obJellyfin.cookies"
     )
-    results = await search.asyncRun(
+    results = await search.asyncSearch(
         queries=[{"query": "kanye west", "category": "Top"}],
         limit=100,
         out="data/search_results",
