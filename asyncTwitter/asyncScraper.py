@@ -128,15 +128,15 @@ class AsyncScraper:
         self.twitterRestId = False
         self.cookies = cookies
 
-        if httpxSocks:
-            self.transport = AsyncProxyTransport.from_url(proxies)
-            self.proxies = None
-            self.proxyString = proxies
+        if httpxSocks and proxies:
+            self.proxies = {
+                "transport": AsyncProxyTransport.from_url(proxies),
+                "proxies": None,
+            }
         else:
-            self.proxies = proxies
-            self.transport = None
-            self.proxyString = proxies
-
+            self.proxies = {"transport": None, "proxies": proxies}
+            
+        kwargs.update(**self.proxies)
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
 
         self.session = await self._async_validate_session(
