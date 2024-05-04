@@ -1064,24 +1064,25 @@ class AsyncScraper:
         return await process(spaces)
 
     def _init_logger(self, **kwargs) -> Logger:
-        if self.debug:
-            self.logger = logging.getLogger("asyncTwitter")
-            self.logger.setLevel(logging.DEBUG)  # Set the logging level for this logger
+        class logger:
+            def warning(self, *args):
+                print(f"{Fore.YELLOW}[-] WARNING: {args[0]}{RESET}")
 
-            # Create a StreamHandler that sends log messages to stdout
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setLevel(logging.DEBUG)  # Set the logging level for this handler
+            def info(self, *args):
+                print(f"{GREEN}[+] INFO: {args[0]}{RESET}")
 
-            # Create a formatter and add it to the handler
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
+            def debug(self, *args):
+                print(f"{Fore.CYAN}[+] DEBUG: {args[0]}{RESET}")
 
-            # Add the handler to the logger
-            self.logger.addHandler(handler)
-            return self.logger
+            def error(self, *args):
+                print(f"{RED}[-] ERROR: {args[0]}{RESET}")
 
+            def critical(self, *args):
+                print(f"{RED}[!] CRITICAL: {args[0]}{RESET}")
+
+        self.logger = logger()
+
+        return self.logger
     async def _async_validate_session(
         self,
         email: str,
