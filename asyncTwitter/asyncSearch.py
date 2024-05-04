@@ -207,7 +207,7 @@ class AsyncSearch:
             if cursor:
                 params["variables"]["cursor"] = cursor
 
-            getResults = self.get(self.session, params)
+            getResults = await self.get(self.session, params)
             
             if not getResults:
                 if self.debug:
