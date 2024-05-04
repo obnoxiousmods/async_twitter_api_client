@@ -291,20 +291,25 @@ class AsyncSearch:
                 await asyncio.sleep(t)
 
     def _init_logger(self, **kwargs) -> Logger:
-        if self.debug:
-            cfg = kwargs.get("log_config")
-            logging.config.dictConfig(cfg or LOG_CONFIG)
+        class logger:
+            def warning(self, *args):
+                print(f"{Fore.YELLOW}[-] WARNING: {args[0]}{RESET}")
 
-            # only support one logger
-            logger_name = list(LOG_CONFIG["loggers"].keys())[0]
+            def info(self, *args):
+                print(f"{GREEN}[+] INFO: {args[0]}{RESET}")
 
-            # set level of all other loggers to ERROR
-            for name in logging.root.manager.loggerDict:
-                if name != logger_name:
-                    logging.getLogger(name).setLevel(logging.ERROR)
+            def debug(self, *args):
+                print(f"{Fore.CYAN}[+] DEBUG: {args[0]}{RESET}")
 
-            return logging.getLogger(logger_name)
+            def error(self, *args):
+                print(f"{Fore.RED}[-] ERROR: {args[0]}{RESET}")
 
+            def critical(self, *args):
+                print(f"{Fore.RED}[!] CRITICAL: {args[0]}{RESET}")
+
+        self.logger = logger()
+
+        return self.logger
     async def _async_validate_session(
         self,
         email: str,
