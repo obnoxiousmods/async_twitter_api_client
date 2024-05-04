@@ -181,7 +181,7 @@ class AsyncSearch:
                 )
                 tg.start_soon(partialPaginate)
                 if self.debug:
-                    self.logger.info(f"Ran {count} search query")
+                    self.logger.info(f"[SEARCH QUERY {count}] Completed")
                 continue
 
         return results
@@ -224,7 +224,7 @@ class AsyncSearch:
                 results.append(res)
                 return res
             total |= set(find_key(entries, "entryId"))
-            self.debug and self.logger.debug(f'{query["query"]}')
+            self.debug and self.logger.debug(f'Searching: {query.get("query")}')
             self.save and (out / f"{time.time_ns()}.json").write_bytes(
                 orjson.dumps(entries)
             )
