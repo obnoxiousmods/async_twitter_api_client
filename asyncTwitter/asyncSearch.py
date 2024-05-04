@@ -7,6 +7,7 @@ import time
 import orjson
 import anyio
 
+from functools import partial
 from logging import Logger
 from pathlib import Path
 from httpx import AsyncClient
@@ -206,15 +207,9 @@ class AsyncSearch:
         while True:
             if cursor:
                 params["variables"]["cursor"] = cursor
-
-            getResults = await self.get(self.session, params)
             
-            if not getResults:
-                if self.debug:
-                    self.logger.debug("Failed to get results")
-                return
-            
-            backoffResults = await self.backoff(getResults, **kwargs)
+            getFunc = partial(self.get, self.session, params)
+            backoffResults = await self.backoff(getFunc, **kwargs)
 
             if not backoffResults:
                 if self.debug:
@@ -272,7 +267,12 @@ class AsyncSearch:
         retries = kwargs.get("retries", 3)
         for i in range(retries + 1):
             try:
-                data, entries, cursor = await fn()
+                resultsFromFunction = await fn()
+                
+                if not resultsFromFunction:
+                    return False
+                
+                data, entries, cursor = resultsFromFunction
                 if errors := data.get("errors"):
                     for e in errors:
                         self.logger.warning(f'{YELLOW}{e.get("message")}{RESET}')
