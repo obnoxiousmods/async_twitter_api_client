@@ -235,6 +235,11 @@ class AsyncSearch:
             f"https://twitter.com/i/api/graphql/{operationQueryID}/{operationName}",
             params=build_params(params),
         )
+        
+        if 'this account is temporarily locked' in response.text:
+            self.logger.error(f'[{self.username}] Account is locked, please use AsyncAccount.unlockViaArkoseCaptcha() or do it manually.')
+            return False
+        
         self.rate_limits[operationName] = {
             k: int(v) for k, v in response.headers.items() if "rate-limit" in k
         }
