@@ -20,8 +20,6 @@ from .constants import (
     trending_params,
 )
 from .util import (
-    BLUE,
-    CYAN,
     GREEN,
     MAGENTA,
     RED,
@@ -41,7 +39,7 @@ from .util import (
     set_qs,
     urlsplit,
 )
-
+from colorama import Fore
 
 class AsyncScraper:
     """Twitter scraper class for async operations.
@@ -848,7 +846,7 @@ class AsyncScraper:
 
     async def _space_listener(self, chat: dict, frequency: int):
         def rand_color():
-            return random.choice([RED, GREEN, RESET, BLUE, CYAN, MAGENTA, YELLOW])
+            return random.choice([RED, GREEN, RESET, Fore.BLUE, Fore.CYAN, MAGENTA, YELLOW])
 
         uri = f"wss://{URL(chat['endpoint']).host}/chatapi/v1/chatnow"
         with open("chatlog.jsonl", "ab") as fp:
