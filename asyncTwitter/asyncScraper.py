@@ -77,7 +77,8 @@ class AsyncScraper:
         self.guest = False
         self.logger = self._init_logger(**kwargs)
         self.max_connections = kwargs.get("max_connections", 100)
-
+        self.proxyString = proxies
+        
         if httpxSocks and proxies:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies),
@@ -127,6 +128,7 @@ class AsyncScraper:
         self.twitterId = False
         self.twitterRestId = False
         self.cookies = cookies
+        self.proxyString = proxies
 
         if httpxSocks and proxies:
             self.proxies = {
