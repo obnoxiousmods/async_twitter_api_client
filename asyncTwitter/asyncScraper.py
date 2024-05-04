@@ -1079,22 +1079,40 @@ class AsyncScraper:
             self.logger.addHandler(handler)
             return self.logger
 
-    async def _async_validate_session(self, *args, **kwargs):
-        email, username, password, session = args
+    async def _async_validate_session(
+        self,
+        email: str,
+        username: str,
+        password: str,
+        session: object,
+        cookies: dict,
+        **kwargs,
+    ):
+        # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
-        # invalid credentials and session
-        cookies = kwargs.get("cookies")
-        proxies = kwargs.get("proxies")
+        if self.debug:
+            self.logger.debug(f"{Fore.MAGENTA}Validating session with pString: {self.proxyString} selfProxies: {self.proxies} ogProxyString: {self.ogProxyString}{RESET}")
 
         # try validating cookies dict
         if isinstance(cookies, dict) and all(
             cookies.get(c) for c in {"ct0", "auth_token"}
         ):
             _session = AsyncClient(
-                cookies=cookies, follow_redirects=True, proxies=proxies
+                cookies=cookies,
+                follow_redirects=True,
+                http2=True,
+                verify=False,
+                timeout=30,
+                **self.proxies,
             )
+            _session.authDetails = {"username": username, "password": password, "email": email}
+            _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            # print("Logging in from Cookies Dict 100%!!!")
+            # print("Logging with cookies Dict 100%")
+            if self.debug:
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with cookies dict{RESET}"
+                )
             return _session
 
         # try validating cookies from file
@@ -1102,28 +1120,50 @@ class AsyncScraper:
             _session = AsyncClient(
                 cookies=orjson.loads(Path(cookies).read_bytes()),
                 follow_redirects=True,
-                proxies=proxies,
+                http2=True,
+                verify=False,
+                timeout=30,
+                **self.proxies,
             )
+            _session.authDetails = {"username": username, "password": password, "email": email}
+            _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
-            # print("Logging in from Cookies File 100%!!!")
+            if self.debug:
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with cookies file{RESET}"
+                )
             return _session
 
         # validate credentials
-        if all((email, username, password)):
-            # print("Logging in from Credentials 100%!!!")
-            return await asyncLogin(email, username, password, **kwargs)
+        if all((email, username, password)) and not session and not cookies:
+            loginResults = await asyncLogin(email, username, password, **kwargs)
+
+            if not loginResults:
+                return False
+
+            session = loginResults
+
+            session._init_with_cookies = False
+            # print("Logging with user pass 100%")
+            if self.debug:
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with user/pass{RESET}"
+                )
+            return session
 
         # invalid credentials, try validating session
         if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
+            session._init_with_cookies = True
             return session
-
-        # no session, credentials, or cookies provided. use guest session.
+        
         if self.debug:
-            self.logger.warning(
-                f"{RED}This is a guest session, some endpoints cannot be accessed.{RESET}\n"
-            )
+            # This is a guest session
+            self.logger.debug(f"{Fore.RED}Invalid session{RESET} | Trying to use guest session for scraper")
+
         self.guest = True
+
         return session
+
 
     @property
     def id(self) -> int:
