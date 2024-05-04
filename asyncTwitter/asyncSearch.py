@@ -212,14 +212,14 @@ class AsyncSearch:
             if not getResults:
                 if self.debug:
                     self.logger.debug("Failed to get results")
-                continue
+                return
             
             backoffResults = await self.backoff(getResults, **kwargs)
 
             if not backoffResults:
                 if self.debug:
                     self.logger.debug("Failed to backoff")
-                continue
+                return
             data, entries, cursor = backoffResults
             res.extend(entries)
             if len(entries) <= 2 or len(total) >= limit:  # just cursors
