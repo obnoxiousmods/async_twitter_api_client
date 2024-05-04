@@ -70,6 +70,8 @@ class AsyncAccount:
             save (bool, optional): Enable or disable saving files. Defaults to True.
             debug (bool, optional): Enable or disable debug logging. Defaults to False.
             twid (bool, optional): Provide the accounts Rest_Id. Defaults to False.
+            proxies (str, optional): The proxy string to provide to AsyncClient. Defaults to None.
+            httpxSocks (bool, optional): Use httpx-socks or native proxies. Defaults to False.
             twoCaptchaApiKey (str, optional): Provide a TwoCaptcha API key. Defaults to None.
 
             Do not confuse save with save_cookies. Save is used to save files like images and videos.

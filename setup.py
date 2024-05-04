@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='asyncTwitterClient',
-    version='0.8.0',
+    version='1.0.0',
     author='obnoxious',
     author_email='obnoxious@dongcorp.org',
     description='A async port of twitter-api-client with extra features',

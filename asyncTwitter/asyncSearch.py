@@ -24,16 +24,45 @@ colors = [f"\x1b[{i}m" for i in range(31, 37)]
 class AsyncSearch:
     def __init__(
         self,
-        email: str = None,
-        username: str = None,
-        password: str = None,
-        session: AsyncClient = None,
+        save: bool = True,
+        debug: bool = False,
+        twid: bool = False,
+        #twoCaptchaApiKey: str = None,
+        proxies: str = None,
+        httpxSocks: bool = False,
         **kwargs,
     ):
-        self.save = kwargs.get("save", True)
-        self.debug = kwargs.get("debug", 0)
+        """Initializes the AsyncSearch class.
+        
+        Class is for searching twitter
+
+        Args:
+            save (bool, optional): Enable or disable saving files. Defaults to True.
+            debug (bool, optional): Enable or disable debug logging. Defaults to False.
+            twid (bool, optional): Provide the accounts Rest_Id. Defaults to False.
+            proxies (str, optional): The proxy string to provide to AsyncClient. Defaults to None.
+            httpxSocks (bool, optional): Use httpx-socks or native proxies. Defaults to False.
+        """
+        self.save = save
+        self.debug = debug
+        self.twid = twid
+        self.gql_api = "https://twitter.com/i/api/graphql"
+        self.v1_api = "https://api.twitter.com/1.1"
+        self.v2_api = "https://twitter.com/i/api/2"
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
+        #self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
+        self.proxyString = proxies
+
+        if httpxSocks and proxies:
+            self.proxies = {
+                "transport": AsyncProxyTransport.from_url(proxies),
+                "proxies": None,
+            }
+        else:
+            self.proxies = {"transport": None, "proxies": proxies}
+
+        self.ogProxyString = proxies
 
     async def asyncAuthenticate(
         self,
