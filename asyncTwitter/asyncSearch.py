@@ -14,6 +14,8 @@ from .constants import Operation, LOG_CONFIG, GREEN, YELLOW, RESET
 from .asyncLogin import asyncLogin
 from .util import get_headers, find_key, build_params
 from functools import partial
+from colorama import Fore
+from httpx_socks import AsyncProxyTransport
 
 reset = "\x1b[0m"
 colors = [f"\x1b[{i}m" for i in range(31, 37)]
@@ -39,12 +41,28 @@ class AsyncSearch:
         username: str = None,
         password: str = None,
         session: AsyncClient = None,
+        proxies: str = None,
+        httpxSocks: bool = False,
+        cookies: dict = None,
         **kwargs,
-    ):
+    ) -> AsyncClient:
         """
         This is used to authenticate the account.
 
-        This used to be in __init__ but we can't await in __init__ so we have to do it here.
+        If email:username:pass is provided will attempt to login
+        If cookies ct0&auth_token are provided will attempt to validate the session using cookies.
+
+        Args:
+            email (str): Email of the account.
+            username (str): Username of the account.
+            password (str): Password of the account.
+            session (AsyncClient): Session to use.
+            proxies (str): Proxies to use.
+            cookies (dict): Cookies to use.
+            **kwargs: Additional arguments to pass to the logger.
+
+        Returns:
+            AsyncClient: The session authenticated session
         """
 
         self.email = email
@@ -52,12 +70,34 @@ class AsyncSearch:
         self.password = password
         self.twitterId = False
         self.twitterRestId = False
-        self.cookies = kwargs.get("cookies")
-        self.proxies = kwargs.get("proxies")
+        self.cookies = cookies
+        self.ogProxyString = proxies
+        self.proxyString = proxies
+
+        if httpxSocks and proxies:
+            self.proxies = {
+                "transport": AsyncProxyTransport.from_url(proxies),
+                "proxies": None,
+            }
+        else:
+            self.proxies = {"transport": None, "proxies": proxies}
+
+        kwargs.update(**self.proxies)
+
+        # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
 
         self.session = await self._async_validate_session(
-            self.email, self.username, self.password, session, **kwargs
+            email=self.email,
+            username=self.username,
+            password=self.password,
+            session=session,
+            cookies=self.cookies,
+            **kwargs,
         )
+
+        if not self.session:
+            self.logger.error(f"Failed to authenticate account: {self.username}")
+            return None
 
         return self.session
 
@@ -77,21 +117,26 @@ class AsyncSearch:
         self, queries: list[dict], limit: int, out: Path, **kwargs
     ) -> list:
         results = []
-        
+
         async with anyio.create_task_group() as tg:
             for count, query in enumerate(queries):
                 partialPaginate = partial(
-                    self.paginate, query=query, limit=limit, out=out, results=results, **kwargs
+                    self.paginate,
+                    query=query,
+                    limit=limit,
+                    out=out,
+                    results=results,
+                    **kwargs,
                 )
                 tg.start_soon(partialPaginate)
                 if self.debug:
                     self.logger.info(f"Ran {count} search query")
                 continue
-            
+
         return results
 
     async def paginate(
-        self, query: dict, limit: int, out: Path, results:list, **kwargs
+        self, query: dict, limit: int, out: Path, results: list, **kwargs
     ) -> list[dict]:
         params = {
             "variables": {
@@ -111,11 +156,11 @@ class AsyncSearch:
         while True:
             if cursor:
                 params["variables"]["cursor"] = cursor
-            
+
             backoffResults = await self.backoff(
                 lambda: self.get(self.session, params), **kwargs
             )
-            
+
             if not backoffResults:
                 if self.debug:
                     self.logger.debug("Failed to backoff")
@@ -140,7 +185,9 @@ class AsyncSearch:
             f"https://twitter.com/i/api/graphql/{operationQueryID}/{operationName}",
             params=build_params(params),
         )
-        self.rate_limits[operationName] = {k: int(v) for k, v in response.headers.items() if 'rate-limit' in k}
+        self.rate_limits[operationName] = {
+            k: int(v) for k, v in response.headers.items() if "rate-limit" in k
+        }
         data = response.json()
         if self.debug:
             self.logger.info(f"Rate limits: {self.rate_limits[operationName]}")
@@ -198,57 +245,112 @@ class AsyncSearch:
 
             return logging.getLogger(logger_name)
 
-    @staticmethod
-    async def _async_validate_session(*args, **kwargs):
-        email, username, password, session = args
+    async def _async_validate_session(
+        self,
+        email: str,
+        username: str,
+        password: str,
+        session: object,
+        cookies: dict,
+        **kwargs,
+    ):
+        # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
-        # validate credentials
-        if all((email, username, password)):
-            return await asyncLogin(email, username, password, **kwargs)
-
-        # invalid credentials, try validating session
-        if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
-            return session
-
-        # invalid credentials and session
-        cookies = kwargs.get("cookies")
+        if self.debug:
+            self.logger.debug(
+                f"{Fore.MAGENTA}[asyncSearch] Validating session with proxyString: {self.proxyString} selfProxies: {self.proxies} ogProxyString: {self.ogProxyString}{RESET}"
+            )
 
         # try validating cookies dict
         if isinstance(cookies, dict) and all(
             cookies.get(c) for c in {"ct0", "auth_token"}
         ):
-            _session = AsyncClient(cookies=cookies, follow_redirects=True)
+            _session = AsyncClient(
+                cookies=cookies,
+                follow_redirects=True,
+                http2=True,
+                verify=False,
+                timeout=30,
+                **self.proxies,
+            )
+            _session.authDetails = {
+                "username": username,
+                "password": password,
+                "email": email,
+            }
+            _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
+            # print("Logging with cookies Dict 100%")
+            if self.debug:
+                self.logger.debug(
+                    f"{GREEN}[asyncSearch] {self.username} Logged in with cookies dict{RESET}"
+                )
             return _session
 
         # try validating cookies from file
         if isinstance(cookies, str):
             _session = AsyncClient(
-                cookies=orjson.loads(Path(cookies).read_bytes()), follow_redirects=True
+                cookies=orjson.loads(Path(cookies).read_bytes()),
+                follow_redirects=True,
+                http2=True,
+                verify=False,
+                timeout=30,
+                **self.proxies,
             )
+            _session.authDetails = {
+                "username": username,
+                "password": password,
+                "email": email,
+            }
+            _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
+            if self.debug:
+                self.logger.debug(
+                    f"{GREEN}[asyncSearch] {self.username} Logged in with cookies file{RESET}"
+                )
             return _session
 
-        raise Exception(
-            "Session not authenticated. "
-            "Please use an authenticated session or remove the `session` argument and try again."
-        )
+        # validate credentials
+        if all((email, username, password)) and not session and not cookies:
+            loginResults = await asyncLogin(email, username, password, **kwargs)
+
+            if not loginResults:
+                return False
+
+            session = loginResults
+
+            session._init_with_cookies = False
+            # print("Logging with user pass 100%")
+            if self.debug:
+                self.logger.debug(
+                    f"{GREEN}{self.username} Logged in with user/pass{RESET}"
+                )
+            return session
+
+        # invalid credentials, try validating session
+        if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
+            session._init_with_cookies = True
+            return session
+
+        return False
 
     def id(self) -> int:
-        """ Get User ID """
+        """Get User ID"""
         if not self.twid:
             potentialTwid = self.session.cookies.get("twid")
-            
+
             if not potentialTwid:
                 raise Exception("Session is missing twid cookie")
-            
+
             self.twid = int(potentialTwid.split("=")[-1].strip().rstrip())
-            
+
         return self.twid
 
     def save_cookies(self, fname: str = None, toFile=True):
-        """ Save cookies to file """
+        """Save cookies to file"""
         cookies = self.session.cookies
         if toFile:
-            Path(f'{fname or cookies.get("username")}.cookies').write_bytes(orjson.dumps(dict(cookies)))
+            Path(f'{fname or cookies.get("username")}.cookies').write_bytes(
+                orjson.dumps(dict(cookies))
+            )
         return dict(cookies)

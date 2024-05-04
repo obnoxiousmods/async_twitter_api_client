@@ -44,7 +44,6 @@ except Exception:
 from .asyncLogin import asyncLogin
 from httpx_socks import AsyncProxyTransport
 from urllib import parse
-from colorama import Fore
 
 class AsyncAccount:
     """The AsyncAccount class is used to interact with the Twitter API.
