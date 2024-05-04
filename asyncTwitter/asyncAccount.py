@@ -192,15 +192,22 @@ class AsyncAccount:
                 getRespForData.text, file=open("unlockGet.html", "w", encoding="utf-8")
             )
 
-        authenticityToken = getRespForData.text.split(
-            '<input type="hidden" name="authenticity_token" value="'
-        )[1].split('"')[0]
-        assignmentToken = getRespForData.text.split(
-            '<input type="hidden" name="assignment_token" value="'
-        )[1].split('"')[0]
-        lang = getRespForData.text.split('<input type="hidden" name="lang" value="')[
-            1
-        ].split('"')[0]
+        try:
+            authenticityToken = getRespForData.text.split(
+                '<input type="hidden" name="authenticity_token" value="'
+            )[1].split('"')[0]
+            assignmentToken = getRespForData.text.split(
+                '<input type="hidden" name="assignment_token" value="'
+            )[1].split('"')[0]
+            lang = getRespForData.text.split('<input type="hidden" name="lang" value="')[
+                1
+            ].split('"')[0]
+        except Exception as e:
+            if self.debug:
+                self.logger.error(
+                    f"[UNLOCK {self.username}] Failed to get Authenticity Token for unlocking, maybe account is not locked?: {e}"
+                )
+            return {"success": False, "error": "Failed to get Authenticity Token."}
 
         if self.debug:
             self.logger.info(
