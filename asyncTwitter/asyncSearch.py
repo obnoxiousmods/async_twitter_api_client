@@ -143,7 +143,11 @@ class AsyncSearch:
             {
                 "query": "drake is the goat",
                 "category": "Latest",
-            }
+            },
+            {
+                "query": "kid cudi is my dad",
+                "category": "Top",
+            },
         ]
 
         Args:
