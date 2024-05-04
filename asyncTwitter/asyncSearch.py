@@ -207,9 +207,14 @@ class AsyncSearch:
             if cursor:
                 params["variables"]["cursor"] = cursor
 
-            backoffResults = await self.backoff(
-                lambda: self.get(self.session, params), **kwargs
-            )
+            getResults = self.get(self.session, params)
+            
+            if not getResults:
+                if self.debug:
+                    self.logger.debug("Failed to get results")
+                continue
+            
+            backoffResults = await self.backoff(getResults, **kwargs)
 
             if not backoffResults:
                 if self.debug:
