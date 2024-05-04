@@ -24,7 +24,6 @@ from .util import (
     MAGENTA,
     RED,
     RESET,
-    YELLOW,
     Path,
     batch_ids,
     build_params,
@@ -846,7 +845,7 @@ class AsyncScraper:
 
     async def _space_listener(self, chat: dict, frequency: int):
         def rand_color():
-            return random.choice([RED, GREEN, RESET, Fore.BLUE, Fore.CYAN, MAGENTA, YELLOW])
+            return random.choice([RED, GREEN, RESET, Fore.BLUE, Fore.CYAN, MAGENTA, Fore.YELLOW])
 
         uri = f"wss://{URL(chat['endpoint']).host}/chatapi/v1/chatnow"
         with open("chatlog.jsonl", "ab") as fp:
