@@ -86,6 +86,7 @@ class AsyncAccount:
         self.gql_api = "https://twitter.com/i/api/graphql"
         self.v1_api = "https://api.twitter.com/1.1"
         self.v2_api = "https://twitter.com/i/api/2"
+        self.capi = "https://caps.twitter.com/v2"
         self.logger = self._init_logger(**kwargs)
         self.rate_limits = {}
         self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
@@ -444,6 +445,37 @@ class AsyncAccount:
         if self.debug:
             log(self.logger, v1Response)
         return v1Response.json()
+
+    async def asyncCAPI(self, path:str, data:dict):
+        resp = await self.session.post(
+            url=f"{self.capi}{path}", data=data
+        )
+        
+        return resp
+
+    async def asyncVotePoll(self, card_uri:str, tweet_id:str, selected_choice:str):
+        """Vote on a poll
+
+        Args:
+            card_uri (str): card://1787309739010850816
+            tweet_id (str): 1787309739354833192
+            selected_choice (str): 2
+        """
+        
+        data = {
+            'twitter:string:card_uri': card_uri,
+            'twitter:long:original_tweet_id': tweet_id,
+            'twitter:string:response_card_name': 'poll2choice_text_only',
+            'twitter:string:cards_platform': 'Web-12',
+            'twitter:string:selected_choice': selected_choice,
+        }
+        
+        votePollResp = await self.asyncCAPI(
+            path="/capi/passthrough/1",
+            data=data
+        )
+        
+        return votePollResp
 
     async def asyncCreatePoll(
         self, text: str, choices: list[str], poll_duration: int
