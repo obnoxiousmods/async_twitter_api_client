@@ -38,6 +38,7 @@ async def async_init_session(proxies=None):
         },
         follow_redirects=True,
         proxies=proxies,
+        verify=False,
     )
     r = await client.post("https://api.twitter.com/1.1/guest/activate.json")
     r = r.json()

@@ -217,11 +217,15 @@ def find_key(obj: any, key: str) -> list:
     return helper(obj, key, [])
 
 
-def log(logger: Logger, resp: Response):
+def log(logger: Logger, resp: Response, *args, **kwargs):
     # x-rate-limit-reset
     # x-rate-limit-remaining
     # x-rate-limit-limit
 
+    if isinstance(resp, bool):
+        logger.info("Logger received a boolean value")
+        return False
+    
     limitRemaining = resp.headers.get("x-rate-limit-remaining", 0)
     limitReset = resp.headers.get("x-rate-limit-reset", 0)
     limit = resp.headers.get("x-rate-limit-limit", 0)
@@ -229,6 +233,7 @@ def log(logger: Logger, resp: Response):
     logger.info(
         f"[{resp.status_code}] {resp.url} | Rate limit: {limitRemaining}/{limit} resets in {limitReset}"
     )
+        
     return True
 
 

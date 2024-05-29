@@ -161,7 +161,9 @@ class AsyncScraper:
         @param kwargs: optional keyword arguments
         @return: list of user data as dicts
         """
-        return await self._asyncrun(Operation.UserByScreenName, screen_names, **kwargs)
+        results = await self._asyncrun(Operation.UserByScreenName, screen_names, **kwargs)
+
+        return results
 
     async def asyncTweetsById(self, tweet_ids: list[int], **kwargs) -> list[dict]:
         """
@@ -788,7 +790,10 @@ class AsyncScraper:
             headers=headers,
             cookies=cookies,
             timeout=20,
-            proxies=self.proxies,
+            verify=False,
+            http2=True,
+            follow_redirects=True,
+            **self.proxies,
         ) as c:
             # Limit queries to 1
             queryLimit = kwargs.pop("queryLimit", False)

@@ -446,20 +446,35 @@ class AsyncAccount:
             log(self.logger, v1Response)
         return v1Response.json()
 
-    async def asyncCAPI(self, path:str, data:dict):
+    async def asyncCAPI(self, path:str, data:dict) -> dict:
+        """Function for POSTing to the twitter capi
+
+        Args:
+            path (str): Endpoint path like /capi/passthrough/1
+            data (dict): _description_
+
+        Returns:
+            dict: _description_
+        """
         resp = await self.session.post(
             url=f"{self.capi}{path}", data=data
         )
         
-        return resp
+        try:
+            return resp.json()
+        except Exception:
+            return resp.text
 
-    async def asyncVotePoll(self, card_uri:str, tweet_id:str, selected_choice:str):
+    async def asyncVotePoll(self, card_uri:str, tweet_id:str, selected_choice:str) -> dict:
         """Vote on a poll
 
         Args:
             card_uri (str): card://1787309739010850816
             tweet_id (str): 1787309739354833192
             selected_choice (str): 2
+            
+        Returns:
+            Response object: The response object from the request
         """
         
         data = {
