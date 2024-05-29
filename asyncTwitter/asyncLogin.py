@@ -228,6 +228,8 @@ async def asyncExecuteLoginFlow(client: AsyncClient, **kwargs) -> AsyncClient | 
 
 
 async def asyncLogin(email: str, username: str, password: str, **kwargs) -> AsyncClient:
+    kwargs.pop("proton", None)
+    
     print(f"[{YELLOW}warning{RESET}] Using Proxy: {kwargs.get('proxies')} Transport: {kwargs.get('transport')}")
     
     client = AsyncClient(

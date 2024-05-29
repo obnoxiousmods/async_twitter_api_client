@@ -87,7 +87,7 @@ class AsyncAccount:
         self.v1_api = "https://api.twitter.com/1.1"
         self.v2_api = "https://twitter.com/i/api/2"
         self.capi = "https://caps.twitter.com/v2"
-        self.logger = self._init_logger(**kwargs)
+        self.logger = self._init_logger()
         self.rate_limits = {}
         self.twoCaptcha = TwoCaptcha(main=self, apiKey=twoCaptchaApiKey)
         self.proxyString = proxies
@@ -1221,7 +1221,7 @@ class AsyncAccount:
         )
         return addAltTextResponse
 
-    def _init_logger(self, **kwargs) -> Logger:
+    def _init_logger(self) -> Logger:
         class logger:
             def warning(self, *args):
                 print(f"{Fore.YELLOW}[-] WARNING: {args[0]}{RESET}")
