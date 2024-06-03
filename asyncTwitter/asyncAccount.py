@@ -94,7 +94,7 @@ class AsyncAccount:
 
         if httpxSocks and proxies:
             self.proxies = {
-                "transport": AsyncProxyTransport.from_url(proxies),
+                "transport": AsyncProxyTransport.from_url(proxies, verify=False),
                 "proxies": None,
             }
         else:
@@ -380,7 +380,7 @@ class AsyncAccount:
 
         if httpxSocks and proxies:
             self.proxies = {
-                "transport": AsyncProxyTransport.from_url(proxies),
+                "transport": AsyncProxyTransport.from_url(proxies, verify=False),
                 "proxies": None,
             }
         else:

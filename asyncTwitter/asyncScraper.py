@@ -40,6 +40,7 @@ from .util import (
 )
 from colorama import Fore
 
+
 class AsyncScraper:
     """Twitter scraper class for async operations.
 
@@ -78,17 +79,16 @@ class AsyncScraper:
         self.logger = self._init_logger(**kwargs)
         self.max_connections = kwargs.get("max_connections", 100)
         self.proxyString = proxies
-        
+
         if httpxSocks and proxies:
             self.proxies = {
-                "transport": AsyncProxyTransport.from_url(proxies),
+                "transport": AsyncProxyTransport.from_url(proxies, verify=False),
                 "proxies": None,
             }
         else:
             self.proxies = {"transport": None, "proxies": proxies}
 
         self.ogProxyString = proxies
-
 
         # print(f'Logger: {self.logger}')
 
@@ -132,24 +132,23 @@ class AsyncScraper:
 
         if httpxSocks and proxies:
             self.proxies = {
-                "transport": AsyncProxyTransport.from_url(proxies),
+                "transport": AsyncProxyTransport.from_url(proxies, verify=False),
                 "proxies": None,
             }
         else:
             self.proxies = {"transport": None, "proxies": proxies}
-            
+
         kwargs.update(**self.proxies)
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {self.cookies}, {self.proxies}')
 
         self.session = await self._async_validate_session(
-            email=self.email, 
-            username=self.username, 
-            password=self.password, 
-            session=session, 
+            email=self.email,
+            username=self.username,
+            password=self.password,
+            session=session,
             cookies=self.cookies,
-            **kwargs
+            **kwargs,
         )
-
 
         return self.session
 
@@ -161,7 +160,9 @@ class AsyncScraper:
         @param kwargs: optional keyword arguments
         @return: list of user data as dicts
         """
-        results = await self._asyncrun(Operation.UserByScreenName, screen_names, **kwargs)
+        results = await self._asyncrun(
+            Operation.UserByScreenName, screen_names, **kwargs
+        )
 
         return results
 
@@ -404,7 +405,10 @@ class AsyncScraper:
             async with AsyncClient(
                 headers=self.session.headers,
                 cookies=self.session.cookies,
-                proxies=self.proxies,
+                verify=False,
+                http2=True,
+                timeout=30,
+                **self.proxies,
             ) as client:
                 tasks = (download(client, x, y) for x, y in urls)
                 if self.pbar:
@@ -477,7 +481,13 @@ class AsyncScraper:
                 "+1300",
                 "+1400",
             ]
-            async with AsyncClient(headers=get_headers(self.session)) as client:
+            async with AsyncClient(
+                headers=get_headers(self.session),
+                verify=False,
+                http2=True,
+                timeout=30,
+                **self.proxies,
+            ) as client:
                 tasks = (get_trends(client, o, url) for o in offsets)
                 if self.pbar:
                     return await tqdm_asyncio.gather(*tasks, desc="Getting trends")
@@ -664,7 +674,12 @@ class AsyncScraper:
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
-                limits=limits, headers=headers, cookies=cookies, timeout=20
+                limits=limits,
+                headers=headers,
+                cookies=cookies,
+                timeout=20,
+                verify=False,
+                **self.proxies,
             ) as c:
                 tasks = (get(c, key) for key in keys)
                 if self.pbar:
@@ -688,7 +703,13 @@ class AsyncScraper:
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
-                limits=limits, headers=headers, cookies=cookies, timeout=20
+                limits=limits,
+                headers=headers,
+                cookies=cookies,
+                timeout=20,
+                **self.proxies,
+                verify=False,
+                http2=True,
             ) as c:
                 tasks = []
                 for d in data:
@@ -726,7 +747,13 @@ class AsyncScraper:
             headers = self.session.headers if self.guest else get_headers(self.session)
             cookies = self.session.cookies
             async with AsyncClient(
-                limits=limits, headers=headers, cookies=cookies, timeout=20
+                limits=limits,
+                headers=headers,
+                cookies=cookies,
+                timeout=20,
+                **self.proxies,
+                verify=False,
+                http2=True,
             ) as c:
                 return await asyncio.gather(*(get(c, key) for key in keys))
 
@@ -853,7 +880,9 @@ class AsyncScraper:
 
     async def _space_listener(self, chat: dict, frequency: int):
         def rand_color():
-            return random.choice([RED, GREEN, RESET, Fore.BLUE, Fore.CYAN, MAGENTA, Fore.YELLOW])
+            return random.choice(
+                [RED, GREEN, RESET, Fore.BLUE, Fore.CYAN, MAGENTA, Fore.YELLOW]
+            )
 
         uri = f"wss://{URL(chat['endpoint']).host}/chatapi/v1/chatnow"
         with open("chatlog.jsonl", "ab") as fp:
@@ -947,7 +976,14 @@ class AsyncScraper:
             return r.json()
 
         limits = Limits(max_connections=self.max_connections)
-        async with AsyncClient(headers=client.headers, limits=limits, timeout=30) as c:
+        async with AsyncClient(
+            headers=client.headers,
+            limits=limits,
+            timeout=30,
+            **self.proxies,
+            http2=True,
+            verify=False,
+        ) as c:
             tasks = (get(c, _id) for _id in spaces)
             if self.pbar:
                 return await tqdm_asyncio.gather(
@@ -1060,7 +1096,7 @@ class AsyncScraper:
             limits = Limits(max_connections=self.max_connections)
             headers, cookies = self.session.headers, self.session.cookies
             async with AsyncClient(
-                limits=limits, headers=headers, cookies=cookies, timeout=20
+                limits=limits, headers=headers, cookies=cookies, timeout=20, **self.proxies, verify=False, http2=True
             ) as c:
                 return await asyncio.gather(*(poll_space(c, space) for space in spaces))
 
@@ -1088,6 +1124,7 @@ class AsyncScraper:
         self.logger = logger()
 
         return self.logger
+
     async def _async_validate_session(
         self,
         email: str,
@@ -1100,7 +1137,9 @@ class AsyncScraper:
         # print(f'AsyncAcc Got: {email}, {username}, {password}, {session}, {kwargs}')
 
         if self.debug:
-            self.logger.debug(f"{Fore.MAGENTA}Validating session with pString: {self.proxyString} selfProxies: {self.proxies} ogProxyString: {self.ogProxyString}{RESET}")
+            self.logger.debug(
+                f"{Fore.MAGENTA}Validating session with pString: {self.proxyString} selfProxies: {self.proxies} ogProxyString: {self.ogProxyString}{RESET}"
+            )
 
         # try validating cookies dict
         if isinstance(cookies, dict) and all(
@@ -1114,7 +1153,11 @@ class AsyncScraper:
                 timeout=30,
                 **self.proxies,
             )
-            _session.authDetails = {"username": username, "password": password, "email": email}
+            _session.authDetails = {
+                "username": username,
+                "password": password,
+                "email": email,
+            }
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
             # print("Logging with cookies Dict 100%")
@@ -1134,7 +1177,11 @@ class AsyncScraper:
                 timeout=30,
                 **self.proxies,
             )
-            _session.authDetails = {"username": username, "password": password, "email": email}
+            _session.authDetails = {
+                "username": username,
+                "password": password,
+                "email": email,
+            }
             _session._init_with_cookies = True
             _session.headers.update(get_headers(_session))
             if self.debug:
@@ -1164,15 +1211,16 @@ class AsyncScraper:
         if session and all(session.cookies.get(c) for c in {"ct0", "auth_token"}):
             session._init_with_cookies = True
             return session
-        
+
         if self.debug:
             # This is a guest session
-            self.logger.debug(f"{Fore.RED}Invalid session{RESET} | Trying to use guest session for scraper")
+            self.logger.debug(
+                f"{Fore.RED}Invalid session{RESET} | Trying to use guest session for scraper"
+            )
 
         self.guest = True
 
         return session
-
 
     @property
     def id(self) -> int:
