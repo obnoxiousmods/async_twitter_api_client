@@ -75,7 +75,7 @@ class AsyncScraper:
         self.debug = debug
         self.pbar = pbar
         self.out = Path(out)
-        self.guest = False
+        self.guest = kwargs.pop("guest", False)
         self.logger = self._init_logger(**kwargs)
         self.max_connections = kwargs.get("max_connections", 100)
         self.proxyString = proxies
