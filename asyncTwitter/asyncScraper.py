@@ -847,6 +847,11 @@ class AsyncScraper:
         else:
             try:
                 r = await self._query(client, operation, **kwargs)
+                if r.status_code == 429: 
+                    self.logger.error("Too Many Requests.. waiting 60 sec..")
+                    await asyncio.sleep(60)
+                    continue
+                
                 initial_data = r.json()
 
                 res = [r]
@@ -862,6 +867,10 @@ class AsyncScraper:
                 break
             try:
                 r = await self._query(client, operation, cursor=cursor, **kwargs)
+                if r.status_code == 429: 
+                    self.logger.error("Too Many Requests.. waiting 60 sec..")
+                    await asyncio.sleep(60)
+                    continue
                 data = r.json()
             except Exception as e:
                 self.logger.error(f"Failed to get pagination data\n{e}")
