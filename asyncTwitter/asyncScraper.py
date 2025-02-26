@@ -847,10 +847,10 @@ class AsyncScraper:
         else:
             try:
                 r = await self._query(client, operation, **kwargs)
+                
                 if r.status_code == 429: 
-                    self.logger.error("Too Many Requests.. waiting 60 sec..")
-                    await asyncio.sleep(60)
-                    continue
+                    self.logger.error("Too Many Requests...")
+                    return False
                 
                 initial_data = r.json()
 
