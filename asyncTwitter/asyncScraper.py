@@ -787,6 +787,10 @@ class AsyncScraper:
         # res = asyncio.run(self._process(operation, _queries, **kwargs))
         res = await self._process(operation, _queries, **kwargs)
 
+        if res[0].status_code == 429:
+            self.logger.warning("TOO MANY REQUESTS")
+            return False
+        
         data = get_json(res, **kwargs)
         return data.pop() if kwargs.get("cursor") else flatten(data)
 
