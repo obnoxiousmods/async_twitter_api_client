@@ -381,10 +381,10 @@ class AsyncAccount:
         if httpxSocks and proxies:
             self.proxies = {
                 "transport": AsyncProxyTransport.from_url(proxies, verify=False),
-                "proxies": None,
+                "proxy": None,
             }
         else:
-            self.proxies = {"transport": None, "proxies": proxies}
+            self.proxies = {"transport": None, "proxy": proxies}
 
         kwargs.update(**self.proxies)
 
