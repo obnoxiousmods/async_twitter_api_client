@@ -787,6 +787,10 @@ class AsyncScraper:
         # res = asyncio.run(self._process(operation, _queries, **kwargs))
         res = await self._process(operation, _queries, **kwargs)
 
+        if not res:
+            self.logger.warning("INVALID RES")
+            return False
+        
         if res[0][0].status_code == 429:
             self.logger.warning("TOO MANY REQUESTS")
             return False
